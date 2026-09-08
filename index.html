@@ -3,7 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Simulador de Persianas RA</title>
+  <title>Persianas RA</title>
+  
+  <!-- Configuracoes PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#25D366">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Persianas RA">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/1033/1033923.png">
+
   <style>
     * { box-sizing: border-box; font-family: Arial, sans-serif; touch-action: manipulation; }
     body {
@@ -218,7 +227,7 @@
     let precoM2Atual = 120;
     let nomeModeloAtual = "Tela Solar 3%";
 
-    // Câmera ao vivo
+    // Iniciar Câmera ao vivo
     async function iniciarCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -253,18 +262,16 @@
       const areaFaturada = Math.max(areaReal, 1.5); 
       let total = areaFaturada * precoM2Atual;
 
-      // Adicionais
       if (document.getElementById('chkBando').checked) {
-        total += largura * 40; // R$ 40 por metro linear
+        total += largura * 40;
       }
       if (document.getElementById('chkMotor').checked) {
-        total += 350; // R$ 350 fixos pelo motor
+        total += 350;
       }
 
       document.getElementById('txtArea').innerText = areaReal.toFixed(2) + " m²";
       document.getElementById('txtTotal').innerText = "R$ " + total.toFixed(2).replace('.', ',');
 
-      // Escala visual proporcional
       const persianaBox = document.getElementById('persianaBox');
       const larguraPx = Math.min(Math.max(largura * 140, 140), 340);
       persianaBox.style.width = larguraPx + "px";
@@ -281,7 +288,7 @@
       }
     }
 
-    // Função de Arraste Touch e Mouse (Drag and Drop)
+    // Arraste Touch e Mouse
     const el = document.getElementById('persianaBox');
     let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
 
@@ -323,7 +330,7 @@
       }
     }
 
-    // Função para Enviar Proposta para o WhatsApp
+    // Envio WhatsApp
     function enviarWhatsApp() {
       const largura = document.getElementById('largura').value;
       const altura = document.getElementById('altura').value;
@@ -343,6 +350,15 @@
         `Orçamento gerado pelo Simulador RA da loja.`;
 
       window.open(`https://api.whatsapp.com/send?text=${mensagem}`, '_blank');
+    }
+
+    // Registro do Service Worker para PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('PWA Service Worker registrado!'))
+          .catch(err => console.log('Falha no PWA:', err));
+      });
     }
 
     // Inicialização
