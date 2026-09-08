@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Persianas RA</title>
   
-  <!-- Configuracoes PWA -->
+  <!-- Configurações PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#25D366">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -26,7 +26,7 @@
       height: 100vh;
     }
 
-    /* Video da Câmera */
+    /* Vídeo da Câmera */
     #videoCam {
       position: fixed;
       top: 0;
@@ -37,7 +37,7 @@
       z-index: 1;
     }
 
-    /* Tela de Arraste da Persiana */
+    /* Camada de Sobreposição */
     .ar-overlay {
       position: fixed;
       top: 0;
@@ -48,32 +48,49 @@
       pointer-events: none;
     }
 
-    /* Persiana Movel */
+    /* Estrutura Movel da Persiana */
     .persiana-container {
       position: absolute;
-      top: 25%;
+      top: 15%;
       left: 50%;
+      transform-origin: top center;
       transform: translate(-50%, 0);
       width: 220px;
-      transition: width 0.2s, transform 0.1s;
       pointer-events: auto;
       cursor: grab;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     .persiana-container:active { cursor: grabbing; }
 
-    .bando { width: 100%; height: 18px; background: #333; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.4); }
+    .bando { 
+      width: 100%; 
+      height: 18px; 
+      background: #333; 
+      border-radius: 4px; 
+      box-shadow: 0 4px 8px rgba(0,0,0,0.4); 
+      flex-shrink: 0;
+    }
+    
     .tecido {
       width: 96%;
-      margin: 0 auto;
-      height: 250px;
+      height: 250px; /* Será alterado via JS */
       background-color: #ffffff;
       opacity: 0.85;
-      transition: height 0.3s ease-in-out, background-color 0.4s, opacity 0.4s, width 0.2s;
       box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+      transition: background-color 0.3s, opacity 0.3s;
     }
-    .barra-peso { width: 98%; margin: 0 auto; height: 8px; background: #222; border-radius: 2px; }
+    
+    .barra-peso { 
+      width: 98%; 
+      height: 8px; 
+      background: #222; 
+      border-radius: 2px; 
+      flex-shrink: 0;
+    }
 
-    /* Painel Inferior de Vendas */
+    /* Painel Inferior */
     .painel-vendas {
       position: fixed;
       bottom: 10px;
@@ -123,7 +140,6 @@
     }
     .btn.ativo { border-color: #007bff; background: #e7f1ff; color: #007bff; }
     
-    /* Opcionais/Acessórios */
     .opcionais-box {
       display: flex;
       justify-content: space-between;
@@ -168,7 +184,7 @@
   <!-- Câmera do Dispositivo -->
   <video id="videoCam" autoplay playsinline></video>
 
-  <!-- Persiana Movel sobre a Câmera -->
+  <!-- Persiana Móvel -->
   <div class="ar-overlay">
     <div class="persiana-container" id="persianaBox">
       <div class="bando"></div>
@@ -177,38 +193,34 @@
     </div>
   </div>
 
-  <!-- Controles da Aplicação -->
+  <!-- Painel de Vendas -->
   <div class="painel-vendas">
     
-    <!-- Opções de Tecido -->
     <div class="botoes-modelo">
       <button class="btn ativo" onclick="selecionarModelo('#ffffff', 0.85, 120, 'Tela Solar 3%', this)">Tela Solar</button>
       <button class="btn" onclick="selecionarModelo('#d7c4b7', 0.90, 140, 'Bege Trans.', this)">Bege</button>
       <button class="btn" onclick="selecionarModelo('#1a1a1a', 1.0, 180, 'Blackout', this)">Blackout</button>
     </div>
 
-    <!-- Ajuste de Dimensões -->
     <div class="controles-linha">
       <div class="grupo-input">
         <label>Largura (m):</label>
-        <input type="number" id="largura" value="1.50" step="0.10" min="0.5" max="4.0" oninput="calcularValores()">
+        <input type="number" id="largura" value="1.50" step="0.10" min="0.5" max="5.0" oninput="calcularValores()">
       </div>
       <div class="grupo-input">
         <label>Altura (m):</label>
-        <input type="number" id="altura" value="2.00" step="0.10" min="0.5" max="4.0" oninput="calcularValores()">
+        <input type="number" id="altura" value="2.00" step="0.10" min="0.5" max="5.0" oninput="calcularValores()">
       </div>
       <div class="grupo-input" style="display: flex; align-items: flex-end;">
         <button class="btn" style="width: 100%; height: 30px;" onclick="alternarPersiana()">Abrir/Fechar</button>
       </div>
     </div>
 
-    <!-- Acessórios Opcionais -->
     <div class="opcionais-box">
       <label><input type="checkbox" id="chkBando" onchange="calcularValores()"> Bandô (+R$40/m)</label>
       <label><input type="checkbox" id="chkMotor" onchange="calcularValores()"> Motorização (+R$350)</label>
     </div>
 
-    <!-- Resumo Comercial -->
     <div class="resumo-orcamento">
       <div>
         <p>Modelo: <strong id="txtModelo">Tela Solar 3%</strong></p>
@@ -227,7 +239,6 @@
     let precoM2Atual = 120;
     let nomeModeloAtual = "Tela Solar 3%";
 
-    // Iniciar Câmera ao vivo
     async function iniciarCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -272,15 +283,16 @@
       document.getElementById('txtArea').innerText = areaReal.toFixed(2) + " m²";
       document.getElementById('txtTotal').innerText = "R$ " + total.toFixed(2).replace('.', ',');
 
-      // --- AJUSTE PROPORCIONAL DE LARGURA E ALTURA NA TELA ---
+      // --- AJUSTE DIRETO DAS DIMENSÕES NA TELA ---
       const persianaBox = document.getElementById('persianaBox');
       const tecido = document.getElementById('tecido');
 
-      // Escala visual proporcional (pixels)
-      const larguraPx = Math.min(Math.max(largura * 130, 100), 360);
-      const alturaPx = Math.min(Math.max(altura * 120, 80), 480);
+      // Converte a largura e altura em pixels diretamente (Fator 120px por metro)
+      const larguraPx = Math.round(largura * 120);
+      const alturaPx = Math.round(altura * 120);
 
       persianaBox.style.width = larguraPx + "px";
+      
       if (!aberta) {
         tecido.style.height = alturaPx + "px";
       }
@@ -289,10 +301,10 @@
     function alternarPersiana() {
       const tecido = document.getElementById('tecido');
       const altura = parseFloat(document.getElementById('altura').value) || 2.0;
-      const alturaPx = Math.min(Math.max(altura * 120, 80), 480);
+      const alturaPx = Math.round(altura * 120);
 
       if (!aberta) {
-        tecido.style.height = '20px';
+        tecido.style.height = '10px';
         aberta = true;
       } else {
         tecido.style.height = alturaPx + 'px';
@@ -300,55 +312,26 @@
       }
     }
 
-    // --- MANIPULAÇÃO TOUCH (ARRASTAR + PINÇA PARA REDIMENSIONAR) ---
+    // --- MANIPULAÇÃO TOUCH DE ARRASAR ---
     const el = document.getElementById('persianaBox');
     let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
-    let initialPinchDist = 0;
-    let scale = 1;
 
-    el.addEventListener("touchstart", handleTouchStart, false);
-    el.addEventListener("touchend", handleTouchEnd, false);
-    el.addEventListener("touchmove", handleTouchMove, false);
+    el.addEventListener("touchstart", dragStart, false);
+    el.addEventListener("touchend", dragEnd, false);
+    el.addEventListener("touchmove", drag, false);
     el.addEventListener("mousedown", dragStart, false);
     el.addEventListener("mouseup", dragEnd, false);
     el.addEventListener("mousemove", drag, false);
 
-    function handleTouchStart(e) {
-      if (e.touches.length === 1) {
-        dragStart(e.touches[0]);
-      } else if (e.touches.length === 2) {
-        isDragging = false;
-        initialPinchDist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-      }
-    }
-
-    function handleTouchMove(e) {
-      if (e.touches.length === 1 && isDragging) {
-        drag(e.touches[0]);
-      } else if (e.touches.length === 2) {
-        e.preventDefault();
-        const dist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-        const factor = dist / initialPinchDist;
-        scale = Math.min(Math.max(scale * (factor > 1 ? 1.02 : 0.98), 0.5), 2.5);
-        atualizarTransform();
-      }
-    }
-
-    function handleTouchEnd(e) {
-      if (e.touches.length < 2) initialPinchDist = 0;
-      if (e.touches.length === 0) dragEnd();
-    }
-
     function dragStart(e) {
-      initialX = e.clientX - xOffset;
-      initialY = e.clientY - yOffset;
-      isDragging = true;
+      if (e.type === "touchstart") {
+        initialX = e.touches[0].clientX - xOffset;
+        initialY = e.touches[0].clientY - yOffset;
+      } else {
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+      }
+      if (e.target.closest('#persianaBox')) isDragging = true;
     }
 
     function dragEnd() {
@@ -358,15 +341,16 @@
 
     function drag(e) {
       if (isDragging) {
-        currentX = e.clientX - initialX;
-        currentY = e.clientY - initialY;
+        if (e.type === "touchmove") {
+          currentX = e.touches[0].clientX - initialX;
+          currentY = e.touches[0].clientY - initialY;
+        } else {
+          currentX = e.clientX - initialX;
+          currentY = e.clientY - initialY;
+        }
         xOffset = currentX; yOffset = currentY;
-        atualizarTransform();
+        el.style.transform = `translate(calc(-50% + ${currentX}px), ${currentY}px)`;
       }
-    }
-
-    function atualizarTransform() {
-      el.style.transform = `translate(calc(-50% + ${currentX}px), ${currentY}px) scale(${scale})`;
     }
 
     // Envio WhatsApp
@@ -391,16 +375,15 @@
       window.open(`https://api.whatsapp.com/send?text=${mensagem}`, '_blank');
     }
 
-    // Registro do Service Worker para PWA
+    // PWA Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('PWA Service Worker registrado!'))
-          .catch(err => console.log('Falha no PWA:', err));
+          .then(reg => console.log('PWA OK!'))
+          .catch(err => console.log('Erro PWA:', err));
       });
     }
 
-    // Inicialização
     iniciarCamera();
     calcularValores();
   </script>
