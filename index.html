@@ -37,7 +37,7 @@
       z-index: 1;
     }
 
-    /* Camada de Sobreposição */
+    /* Tela de Arraste da Persiana */
     .ar-overlay {
       position: fixed;
       top: 0;
@@ -48,14 +48,13 @@
       pointer-events: none;
     }
 
-    /* Estrutura Movel da Persiana */
+    /* Estrutura da Persiana */
     .persiana-container {
       position: absolute;
-      top: 15%;
+      top: 10%;
       left: 50%;
-      transform-origin: top center;
       transform: translate(-50%, 0);
-      width: 220px;
+      width: 200px;
       pointer-events: auto;
       cursor: grab;
       display: flex;
@@ -69,28 +68,27 @@
       height: 18px; 
       background: #333; 
       border-radius: 4px; 
-      box-shadow: 0 4px 8px rgba(0,0,0,0.4); 
+      box-shadow: 0 4px 8px rgba(0,0,0,0.4);
       flex-shrink: 0;
     }
     
     .tecido {
       width: 96%;
-      height: 250px; /* Será alterado via JS */
       background-color: #ffffff;
       opacity: 0.85;
       box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-      transition: background-color 0.3s, opacity 0.3s;
+      /* Sem altura fixa nem transition para permitir ajuste livre via JS */
     }
     
     .barra-peso { 
       width: 98%; 
       height: 8px; 
       background: #222; 
-      border-radius: 2px; 
+      border-radius: 2px;
       flex-shrink: 0;
     }
 
-    /* Painel Inferior */
+    /* Painel Inferior de Vendas */
     .painel-vendas {
       position: fixed;
       bottom: 10px;
@@ -184,7 +182,7 @@
   <!-- Câmera do Dispositivo -->
   <video id="videoCam" autoplay playsinline></video>
 
-  <!-- Persiana Móvel -->
+  <!-- Persiana Móvel sobre a Câmera -->
   <div class="ar-overlay">
     <div class="persiana-container" id="persianaBox">
       <div class="bando"></div>
@@ -193,7 +191,7 @@
     </div>
   </div>
 
-  <!-- Painel de Vendas -->
+  <!-- Controles da Aplicação -->
   <div class="painel-vendas">
     
     <div class="botoes-modelo">
@@ -283,11 +281,11 @@
       document.getElementById('txtArea').innerText = areaReal.toFixed(2) + " m²";
       document.getElementById('txtTotal').innerText = "R$ " + total.toFixed(2).replace('.', ',');
 
-      // --- AJUSTE DIRETO DAS DIMENSÕES NA TELA ---
+      // --- ATUALIZAÇÃO DIRETA DA LARGURA E ALTURA VISUAIS (PIXELS) ---
       const persianaBox = document.getElementById('persianaBox');
       const tecido = document.getElementById('tecido');
 
-      // Converte a largura e altura em pixels diretamente (Fator 120px por metro)
+      // Escala: 120px para cada 1.00 metro
       const larguraPx = Math.round(largura * 120);
       const alturaPx = Math.round(altura * 120);
 
@@ -304,7 +302,7 @@
       const alturaPx = Math.round(altura * 120);
 
       if (!aberta) {
-        tecido.style.height = '10px';
+        tecido.style.height = '15px';
         aberta = true;
       } else {
         tecido.style.height = alturaPx + 'px';
@@ -312,7 +310,7 @@
       }
     }
 
-    // --- MANIPULAÇÃO TOUCH DE ARRASAR ---
+    // --- ARRASTE TOUCH/MOUSE ---
     const el = document.getElementById('persianaBox');
     let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
 
@@ -375,11 +373,11 @@
       window.open(`https://api.whatsapp.com/send?text=${mensagem}`, '_blank');
     }
 
-    // PWA Service Worker
+    // Service Worker PWA
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
-          .then(reg => console.log('PWA OK!'))
+          .then(reg => console.log('PWA OK'))
           .catch(err => console.log('Erro PWA:', err));
       });
     }
