@@ -2,10 +2,10 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Simulador de Persianas RA</title>
   <style>
-    * { box-sizing: border-box; font-family: Arial, sans-serif; }
+    * { box-sizing: border-box; font-family: Arial, sans-serif; touch-action: manipulation; }
     body {
       margin: 0;
       padding: 0;
@@ -17,7 +17,7 @@
       height: 100vh;
     }
 
-    /* Video da Câmera em Tempo Real */
+    /* Video da Câmera */
     #videoCam {
       position: fixed;
       top: 0;
@@ -28,7 +28,7 @@
       z-index: 1;
     }
 
-    /* Area de Sobreposição da Persiana Virtual */
+    /* Tela de Arraste da Persiana */
     .ar-overlay {
       position: fixed;
       top: 0;
@@ -36,72 +36,75 @@
       width: 100vw;
       height: 100vh;
       z-index: 2;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      pointer-events: none; /* Deixa interagir com o fundo */
+      pointer-events: none;
     }
 
+    /* Persiana Movel */
     .persiana-container {
       position: absolute;
-      top: 20%;
+      top: 25%;
+      left: 50%;
+      transform: translate(-50%, 0);
       width: 250px;
-      transition: width 0.3s;
+      transition: width 0.2s;
       pointer-events: auto;
+      cursor: grab;
     }
+    .persiana-container:active { cursor: grabbing; }
+
     .bando { width: 100%; height: 18px; background: #333; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.4); }
     .tecido {
       width: 96%;
       margin: 0 auto;
-      height: 300px;
+      height: 250px;
       background-color: #ffffff;
       opacity: 0.85;
-      transition: height 0.8s ease-in-out, background-color 0.4s, opacity 0.4s, width 0.3s;
+      transition: height 0.6s ease-in-out, background-color 0.4s, opacity 0.4s, width 0.2s;
       box-shadow: 0 8px 16px rgba(0,0,0,0.3);
     }
     .barra-peso { width: 98%; margin: 0 auto; height: 8px; background: #222; border-radius: 2px; }
 
-    /* Painel de Vendas Inferior Flutuante */
+    /* Painel Inferior de Vendas */
     .painel-vendas {
       position: fixed;
       bottom: 10px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 10;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 15px 20px;
+      background: rgba(255, 255, 255, 0.96);
+      padding: 12px 16px;
       border-radius: 16px;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-      width: 90%;
-      max-width: 400px;
-      backdrop-filter: blur(5px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+      width: 92%;
+      max-width: 420px;
+      backdrop-filter: blur(8px);
     }
 
     .controles-linha {
       display: flex;
-      gap: 10px;
-      margin-bottom: 10px;
+      gap: 8px;
+      margin-bottom: 8px;
     }
 
     .grupo-input { flex: 1; }
-    .grupo-input label { display: block; font-size: 11px; font-weight: bold; color: #555; margin-bottom: 3px; }
+    .grupo-input label { display: block; font-size: 11px; font-weight: bold; color: #555; margin-bottom: 2px; }
     .grupo-input input {
       width: 100%;
       padding: 6px 8px;
       border: 1px solid #ccc;
       border-radius: 6px;
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .botoes-modelo {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
       gap: 6px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     .btn {
-      padding: 8px;
+      padding: 7px;
       border: 1px solid #ccc;
       border-radius: 6px;
       font-weight: bold;
@@ -110,18 +113,45 @@
       font-size: 11px;
     }
     .btn.ativo { border-color: #007bff; background: #e7f1ff; color: #007bff; }
-    .btn-action { background: #28a745; color: #fff; border: none; width: 100%; font-size: 13px; margin-top: 6px; }
+    
+    /* Opcionais/Acessórios */
+    .opcionais-box {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 11px;
+      font-weight: bold;
+      color: #444;
+      background: #f1f3f5;
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
+    .opcionais-box label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
 
     .resumo-orcamento {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #f1f3f5;
-      padding: 8px 12px;
-      border-radius: 8px;
+      margin-bottom: 8px;
     }
-    .resumo-orcamento p { margin: 0; font-size: 12px; color: #444; }
-    .preco-total { font-size: 16px; font-weight: bold; color: #28a745; }
+    .resumo-orcamento p { margin: 0; font-size: 11px; color: #444; }
+    .preco-total { font-size: 17px; font-weight: bold; color: #28a745; }
+
+    .btn-wsp {
+      background: #25D366;
+      color: #fff;
+      border: none;
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
   </style>
 </head>
 <body>
@@ -129,7 +159,7 @@
   <!-- Câmera do Dispositivo -->
   <video id="videoCam" autoplay playsinline></video>
 
-  <!-- Camada da Persiana sobreposta -->
+  <!-- Persiana Movel sobre a Câmera -->
   <div class="ar-overlay">
     <div class="persiana-container" id="persianaBox">
       <div class="bando"></div>
@@ -159,8 +189,14 @@
         <input type="number" id="altura" value="2.00" step="0.10" min="0.5" max="3.0" oninput="calcularValores()">
       </div>
       <div class="grupo-input" style="display: flex; align-items: flex-end;">
-        <button class="btn" style="width: 100%; height: 31px;" onclick="alternarPersiana()">Abrir/Fechar</button>
+        <button class="btn" style="width: 100%; height: 30px;" onclick="alternarPersiana()">Abrir/Fechar</button>
       </div>
+    </div>
+
+    <!-- Acessórios Opcionais -->
+    <div class="opcionais-box">
+      <label><input type="checkbox" id="chkBando" onchange="calcularValores()"> Bandô (+R$40/m)</label>
+      <label><input type="checkbox" id="chkMotor" onchange="calcularValores()"> Motorização (+R$350)</label>
     </div>
 
     <!-- Resumo Comercial -->
@@ -172,7 +208,9 @@
       <div class="preco-total" id="txtTotal">R$ 360,00</div>
     </div>
 
-    <button class="btn btn-action" onclick="alert('Orçamento gerado para envio!')">Gerar Proposta PDF</button>
+    <button class="btn-wsp" onclick="enviarWhatsApp()">
+      Enviar Orçamento no WhatsApp
+    </button>
   </div>
 
   <script>
@@ -180,17 +218,15 @@
     let precoM2Atual = 120;
     let nomeModeloAtual = "Tela Solar 3%";
 
-    // Iniciar Câmera do Dispositivo
+    // Câmera ao vivo
     async function iniciarCamera() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: "environment" } // Prioriza câmera traseira no celular
+          video: { facingMode: "environment" } 
         });
-        const video = document.getElementById('videoCam');
-        video.srcObject = stream;
+        document.getElementById('videoCam').srcObject = stream;
       } catch (err) {
-        console.error("Erro ao acessar a câmera: ", err);
-        alert("Não foi possível acessar a câmera ou a permissão foi negada.");
+        console.error("Erro na câmera: ", err);
       }
     }
 
@@ -215,25 +251,98 @@
 
       const areaReal = largura * altura;
       const areaFaturada = Math.max(areaReal, 1.5); 
-      const total = areaFaturada * precoM2Atual;
+      let total = areaFaturada * precoM2Atual;
+
+      // Adicionais
+      if (document.getElementById('chkBando').checked) {
+        total += largura * 40; // R$ 40 por metro linear
+      }
+      if (document.getElementById('chkMotor').checked) {
+        total += 350; // R$ 350 fixos pelo motor
+      }
 
       document.getElementById('txtArea').innerText = areaReal.toFixed(2) + " m²";
       document.getElementById('txtTotal').innerText = "R$ " + total.toFixed(2).replace('.', ',');
 
+      // Escala visual proporcional
       const persianaBox = document.getElementById('persianaBox');
-      const larguraPx = Math.min(Math.max(largura * 150, 150), 340);
+      const larguraPx = Math.min(Math.max(largura * 140, 140), 340);
       persianaBox.style.width = larguraPx + "px";
     }
 
     function alternarPersiana() {
       const tecido = document.getElementById('tecido');
       if (!aberta) {
-        tecido.style.height = '30px';
+        tecido.style.height = '20px';
         aberta = true;
       } else {
-        tecido.style.height = '300px';
+        tecido.style.height = '250px';
         aberta = false;
       }
+    }
+
+    // Função de Arraste Touch e Mouse (Drag and Drop)
+    const el = document.getElementById('persianaBox');
+    let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
+
+    el.addEventListener("touchstart", dragStart, false);
+    el.addEventListener("touchend", dragEnd, false);
+    el.addEventListener("touchmove", drag, false);
+    el.addEventListener("mousedown", dragStart, false);
+    el.addEventListener("mouseup", dragEnd, false);
+    el.addEventListener("mousemove", drag, false);
+
+    function dragStart(e) {
+      if (e.type === "touchstart") {
+        initialX = e.touches[0].clientX - xOffset;
+        initialY = e.touches[0].clientY - yOffset;
+      } else {
+        initialX = e.clientX - xOffset;
+        initialY = e.clientY - yOffset;
+      }
+      if (e.target.closest('#persianaBox')) isDragging = true;
+    }
+
+    function dragEnd() {
+      initialX = currentX; initialY = currentY;
+      isDragging = false;
+    }
+
+    function drag(e) {
+      if (isDragging) {
+        e.preventDefault();
+        if (e.type === "touchmove") {
+          currentX = e.touches[0].clientX - initialX;
+          currentY = e.touches[0].clientY - initialY;
+        } else {
+          currentX = e.clientX - initialX;
+          currentY = e.clientY - initialY;
+        }
+        xOffset = currentX; yOffset = currentY;
+        el.style.transform = `translate(calc(-50% + ${currentX}px), ${currentY}px)`;
+      }
+    }
+
+    // Função para Enviar Proposta para o WhatsApp
+    function enviarWhatsApp() {
+      const largura = document.getElementById('largura').value;
+      const altura = document.getElementById('altura').value;
+      const area = document.getElementById('txtArea').innerText;
+      const total = document.getElementById('txtTotal').innerText;
+      
+      let adicionais = [];
+      if (document.getElementById('chkBando').checked) adicionais.push("Bandô");
+      if (document.getElementById('chkMotor').checked) adicionais.push("Motorização");
+      const textoAdicionais = adicionais.length > 0 ? adicionais.join(", ") : "Nenhum";
+
+      const mensagem = `Olá! Segue o orçamento da sua persiana:%0A%0A` +
+        `📌 *Modelo:* ${nomeModeloAtual}%0A` +
+        `📐 *Medidas:* ${largura}m x ${altura}m (${area})%0A` +
+        `⚙️ *Opcionais:* ${textoAdicionais}%0A` +
+        `💰 *Valor Total:* ${total}%0A%0A` +
+        `Orçamento gerado pelo Simulador RA da loja.`;
+
+      window.open(`https://api.whatsapp.com/send?text=${mensagem}`, '_blank');
     }
 
     // Inicialização
