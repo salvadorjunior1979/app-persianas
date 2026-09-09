@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Persianas RA - Com Medição</title>
+  <title>Persianas RA - Medição Completa</title>
   
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#25D366">
@@ -33,7 +33,6 @@
       z-index: 1;
     }
 
-    /* Canvas para desenhar os pontos de medição */
     #measureCanvas {
       position: fixed;
       top: 0;
@@ -92,20 +91,21 @@
       flex-shrink: 0;
     }
 
-    /* Modos e Notificações de Medição */
     .status-medicao {
       position: fixed;
       top: 15px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 11;
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.85);
       color: #fff;
-      padding: 8px 16px;
+      padding: 10px 18px;
       border-radius: 20px;
-      font-size: 12px;
+      font-size: 13px;
       display: none;
       font-weight: bold;
+      text-align: center;
+      border: 1px solid #25D366;
     }
 
     .painel-vendas {
@@ -202,7 +202,7 @@
   <video id="videoCam" autoplay playsinline></video>
   <canvas id="measureCanvas"></canvas>
 
-  <div id="statusMedicao" class="status-medicao">Toque no canto esquerdo e direito da janela na tela</div>
+  <div id="statusMedicao" class="status-medicao">Passo 1/2: Toque nos cantos LARGURA (Esquerdo e Direito)</div>
 
   <div class="ar-overlay">
     <div class="persiana-container" id="persianaBox">
@@ -229,7 +229,7 @@
         <label>Altura (m):</label>
         <input type="number" id="altura" value="2.00" step="0.10" min="0.5" max="5.0" oninput="calcularValores()">
       </div>
-      <div class="grupo-input" style="display: flex; align-items: flex-end; gap: 4px;">
+      <div class="grupo-input" style="display: flex; align-items: flex-end;">
         <button class="btn btn-medir" style="width: 100%; height: 30px;" onclick="iniciarMedicao()">📏 Medir</button>
       </div>
     </div>
@@ -319,14 +319,14 @@
       if (!aberta) tecido.style.setProperty('height', alturaPx + 'px', 'important');
     }
 
-    /* MODO DE MEDIÇÃO POR TOQUE */
+    /* MEDIÇÃO EM 4 PONTOS (2 LARGURA + 2 ALTURA) */
     function iniciarMedicao() {
       modoMedicao = true;
       pontosMedicao = [];
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const status = document.getElementById('statusMedicao');
       status.style.display = 'block';
-      status.innerText = "Toque nas duas extremidades da janela";
+      status.innerText = "Toque 2 vezes: extremidades da LARGURA ↔️";
     }
 
     window.addEventListener('touchstart', (e) => {
@@ -336,41 +336,72 @@
 
       desenharMedicao();
 
-      if (pontosMedicao.length === 2) {
-        const dx = pontosMedicao[1].x - pontosMedicao[0].x;
-        const dy = pontosMedicao[1].y - pontosMedicao[0].y;
-        const distanciaPx = Math.sqrt(dx * dx + dy * dy);
+      const status = document.getElementById('statusMedicao');
 
-        // Fator de conversão aproximado da tela para metros
-        const novaLargura = Math.max(0.6, (distanciaPx / 130)).toFixed(2);
+      if (pontosMedicao.length === 2) {
+        status.innerText = "Agora toque 2 vezes: extremidades da ALTURA ↕️";
+      }
+
+      if (pontosMedicao.length === 4) {
+        // Cálculo da Largura (Primeiros 2 pontos)
+        const dxL = pontosMedicao[1].x - pontosMedicao[0].x;
+        const dyL = pontosMedicao[1].y - pontosMedicao[0].y;
+        const distLarguraPx = Math.sqrt(dxL * dxL + dyL * dyL);
+        const novaLargura = Math.max(0.5, (distLarguraPx / 130)).toFixed(2);
+
+        // Cálculo da Altura (Últimos 2 pontos)
+        const dxA = pontosMedicao[3].x - pontosMedicao[2].x;
+        const dyA = pontosMedicao[3].y - pontosMedicao[2].y;
+        const distAlturaPx = Math.sqrt(dxA * dxA + dyA * dyA);
+        const novaAltura = Math.max(0.5, (distAlturaPx / 130)).toFixed(2);
+
+        // Atualização dos inputs
         document.getElementById('largura').value = novaLargura;
+        document.getElementById('altura').value = novaAltura;
 
         calcularValores();
 
+        status.innerText = "Medição concluída! ✅";
         modoMedicao = false;
+
         setTimeout(() => {
-          document.getElementById('statusMedicao').style.display = 'none';
+          status.style.display = 'none';
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }, 2000);
+        }, 2200);
       }
     });
 
     function desenharMedicao() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#ff0055';
-      ctx.strokeStyle = '#ff0055';
       ctx.lineWidth = 3;
 
-      pontosMedicao.forEach(p => {
+      // Desenhar Pontos de Largura (Vermelhos)
+      for (let i = 0; i < Math.min(pontosMedicao.length, 2); i++) {
+        ctx.fillStyle = '#ff0055';
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+        ctx.arc(pontosMedicao[i].x, pontosMedicao[i].y, 8, 0, Math.PI * 2);
         ctx.fill();
-      });
-
-      if (pontosMedicao.length === 2) {
+      }
+      if (pontosMedicao.length >= 2) {
+        ctx.strokeStyle = '#ff0055';
         ctx.beginPath();
         ctx.moveTo(pontosMedicao[0].x, pontosMedicao[0].y);
         ctx.lineTo(pontosMedicao[1].x, pontosMedicao[1].y);
+        ctx.stroke();
+      }
+
+      // Desenhar Pontos de Altura (Azuis)
+      for (let i = 2; i < pontosMedicao.length; i++) {
+        ctx.fillStyle = '#007bff';
+        ctx.beginPath();
+        ctx.arc(pontosMedicao[i].x, pontosMedicao[i].y, 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (pontosMedicao.length === 4) {
+        ctx.strokeStyle = '#007bff';
+        ctx.beginPath();
+        ctx.moveTo(pontosMedicao[2].x, pontosMedicao[2].y);
+        ctx.lineTo(pontosMedicao[3].x, pontosMedicao[3].y);
         ctx.stroke();
       }
     }
