@@ -1,464 +1,225 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Persianas RA - Medição Completa</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vizora - Simulador 3D & Orçamentos</title>
   
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#25D366">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Model Viewer (3D e Realidade Aumentada) -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+  
+  <!-- QR Code Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <style>
-    * { box-sizing: border-box; font-family: Arial, sans-serif; touch-action: manipulation; }
-    body {
-      margin: 0;
-      padding: 0;
-      background: #000;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      height: 100vh;
-    }
-
-    #videoCam {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
-      z-index: 1;
-    }
-
-    #measureCanvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 3;
-      pointer-events: none;
-    }
-
-    .ar-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 2;
-      pointer-events: none;
-    }
-
-    .persiana-container {
-      position: absolute;
-      top: 10%;
-      left: 50%;
-      transform: translate(-50%, 0);
-      pointer-events: auto;
-      cursor: grab;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .bando { 
-      width: 100%; 
-      height: 18px; 
-      background: #333; 
-      border-radius: 4px; 
-      box-shadow: 0 4px 8px rgba(0,0,0,0.4);
-      flex-shrink: 0;
-    }
-    
-    .tecido {
-      width: 96%;
-      background-color: #ffffff;
-      opacity: 0.85;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-      flex-shrink: 0;
-      transition: height 0.1s ease-out, width 0.1s ease-out;
-    }
-    
-    .barra-peso { 
-      width: 98%; 
-      height: 8px; 
-      background: #222; 
-      border-radius: 2px;
-      flex-shrink: 0;
-    }
-
-    .status-medicao {
-      position: fixed;
-      top: 15px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 11;
-      background: rgba(0, 0, 0, 0.85);
-      color: #fff;
-      padding: 10px 18px;
-      border-radius: 20px;
-      font-size: 13px;
-      display: none;
-      font-weight: bold;
-      text-align: center;
-      border: 1px solid #25D366;
-    }
-
-    .painel-vendas {
-      position: fixed;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      background: rgba(255, 255, 255, 0.96);
-      padding: 12px 16px;
-      border-radius: 16px;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-      width: 92%;
-      max-width: 420px;
-      backdrop-filter: blur(8px);
-    }
-
-    .controles-linha {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-
-    .grupo-input { flex: 1; }
-    .grupo-input label { display: block; font-size: 11px; font-weight: bold; color: #555; margin-bottom: 2px; }
-    .grupo-input input {
-      width: 100%;
-      padding: 6px 8px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 13px;
-    }
-
-    .botoes-modelo {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 6px;
-      margin-bottom: 8px;
-    }
-
-    .btn {
-      padding: 7px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      background: #f8f9fa;
-      font-size: 11px;
-    }
-    .btn.ativo { border-color: #007bff; background: #e7f1ff; color: #007bff; }
-    .btn-medir { background: #17a2b8; color: white; border: none; }
-
-    .opcionais-box {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 8px;
-      font-size: 11px;
-      font-weight: bold;
-      color: #444;
-      background: #f1f3f5;
-      padding: 6px 10px;
-      border-radius: 6px;
-    }
-    .opcionais-box label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
-
-    .resumo-orcamento {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .resumo-orcamento p { margin: 0; font-size: 11px; color: #444; }
-    .preco-total { font-size: 17px; font-weight: bold; color: #28a745; }
-
-    .btn-wsp {
-      background: #25D366;
-      color: #fff;
-      border: none;
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: bold;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
     }
   </style>
 </head>
-<body>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col">
 
-  <video id="videoCam" autoplay playsinline></video>
-  <canvas id="measureCanvas"></canvas>
-
-  <div id="statusMedicao" class="status-medicao">Passo 1/2: Toque nos cantos LARGURA (Esquerdo e Direito)</div>
-
-  <div class="ar-overlay">
-    <div class="persiana-container" id="persianaBox">
-      <div class="bando"></div>
-      <div id="tecido" class="tecido"></div>
-      <div class="barra-peso"></div>
+  <!-- Header -->
+  <header class="glass-panel sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">V</div>
+      <h1 class="text-xl font-bold tracking-tight text-slate-900">Vizora <span class="text-xs font-normal text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">Simulador</span></h1>
     </div>
-  </div>
-
-  <div class="painel-vendas">
-    
-    <div class="botoes-modelo">
-      <button class="btn ativo" onclick="selecionarModelo('#ffffff', 0.85, 120, 'Tela Solar 3%', this)">Tela Solar</button>
-      <button class="btn" onclick="selecionarModelo('#d7c4b7', 0.90, 140, 'Bege Trans.', this)">Bege</button>
-      <button class="btn" onclick="selecionarModelo('#1a1a1a', 1.0, 180, 'Blackout', this)">Blackout</button>
-    </div>
-
-    <div class="controles-linha">
-      <div class="grupo-input">
-        <label>Largura (m):</label>
-        <input type="number" id="largura" value="1.50" step="0.10" min="0.5" max="5.0" oninput="calcularValores()">
-      </div>
-      <div class="grupo-input">
-        <label>Altura (m):</label>
-        <input type="number" id="altura" value="2.00" step="0.10" min="0.5" max="5.0" oninput="calcularValores()">
-      </div>
-      <div class="grupo-input" style="display: flex; align-items: flex-end;">
-        <button class="btn btn-medir" style="width: 100%; height: 30px;" onclick="iniciarMedicao()">📏 Medir</button>
-      </div>
-    </div>
-
-    <div class="opcionais-box">
-      <label><input type="checkbox" id="chkBando" onchange="calcularValores()"> Bandô (+R$40/m)</label>
-      <label><input type="checkbox" id="chkMotor" onchange="calcularValores()"> Motorização (+R$350)</label>
-    </div>
-
-    <div class="resumo-orcamento">
-      <div>
-        <p>Modelo: <strong id="txtModelo">Tela Solar 3%</strong></p>
-        <p>Área: <strong id="txtArea">3.00 m²</strong></p>
-      </div>
-      <div class="preco-total" id="txtTotal">R$ 360,00</div>
-    </div>
-
-    <button class="btn-wsp" onclick="enviarWhatsApp()">
-      Enviar Orçamento no WhatsApp
+    <button onclick="gerarQRCodeProposta()" class="bg-slate-900 text-white text-sm px-4 py-2 rounded-lg font-medium hover:bg-slate-800 transition">
+      Gerar QR Code
     </button>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- Area do Simulador / Visualizador (2 Colunas no Desktop) -->
+    <div class="lg:col-span-2 flex flex-col gap-4">
+      
+      <!-- Seletor de Modo -->
+      <div class="flex gap-2 p-1 bg-slate-200/80 rounded-xl w-fit text-sm font-medium">
+        <button id="btn-mode-3d" onclick="alterarModo('3d')" class="px-4 py-1.5 rounded-lg bg-white shadow-sm text-slate-900 transition">Modelo 3D / RA</button>
+        <button id="btn-mode-2d" onclick="alterarModo('2d')" class="px-4 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">Simulação em Foto (2D)</button>
+      </div>
+
+      <!-- Container Visualizador 3D / RA -->
+      <div id="container-3d" class="relative w-full h-[450px] md:h-[550px] bg-slate-200 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
+        <model-viewer 
+          id="persiana-model"
+          src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"
+          alt="Modelo 3D da Persiana"
+          ar
+          ar-modes="webxr scene-viewer quick-look"
+          camera-controls
+          shadow-intensity="1"
+          class="w-full h-full">
+          <button slot="ar-button" class="absolute bottom-4 right-4 bg-indigo-600 text-white font-medium text-sm px-4 py-2.5 rounded-xl shadow-lg hover:bg-indigo-700 transition flex items-center gap-2">
+            📷 Ver na sua Janela (RA)
+          </button>
+        </model-viewer>
+      </div>
+
+      <!-- Container Simulador 2D (Canvas) -->
+      <div id="container-2d" class="hidden relative w-full h-[450px] md:h-[550px] bg-slate-900 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
+        <canvas id="canvas-2d" class="max-w-full max-h-full object-contain"></canvas>
+        <div class="absolute bottom-4 left-4 glass-panel px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700">
+          Ajuste as dimensões no painel ao lado
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Painel de Configurações & Orçamento (1 Coluna) -->
+    <div class="glass-panel p-6 rounded-2xl shadow-sm flex flex-col justify-between gap-6">
+      <div class="space-y-6">
+        <h2 class="text-lg font-bold text-slate-900 border-b border-slate-200/80 pb-3">Personalizar Persiana</h2>
+        
+        <!-- Medidas -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Largura (m)</label>
+            <input type="number" id="input-largura" value="1.50" step="0.10" min="0.5" oninput="atualizarCalculos()" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Altura (m)</label>
+            <input type="number" id="input-altura" value="1.80" step="0.10" min="0.5" oninput="atualizarCalculos()" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium" />
+          </div>
+        </div>
+
+        <!-- Tipo de Tecido -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Modelo / Tecido</label>
+          <select id="select-tecido" onchange="atualizarCalculos()" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium">
+            <option value="120">Rolô Blackout (R$ 120/m²)</option>
+            <option value="95">Rolô Tela Solar 3% (R$ 95/m²)</option>
+            <option value="150">Persiana Horizontal Alumínio (R$ 150/m²)</option>
+            <option value="210">Double Vision / Romana (R$ 210/m²)</option>
+          </select>
+        </div>
+
+        <!-- Resumo do Cálculo -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
+          <div class="flex justify-between text-sm text-slate-600">
+            <span>Área Total:</span>
+            <span id="txt-area" class="font-semibold text-slate-800">2.70 m²</span>
+          </div>
+          <div class="flex justify-between text-base font-bold text-slate-900 border-t border-slate-200/60 pt-2">
+            <span>Valor Estimado:</span>
+            <span id="txt-preco" class="text-indigo-600">R$ 324,00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botão com ação configurada para o WhatsApp -->
+      <button onclick="enviarOrcamentoWhatsApp()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl shadow-md transition flex items-center justify-center gap-2">
+        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
+          <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+        </svg>
+        Solicitar Orçamento via WhatsApp
+      </button>
+    </div>
+
+  </main>
+
+  <!-- Modal do QR Code -->
+  <div id="modal-qrcode" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center space-y-4 shadow-xl">
+      <h3 class="text-lg font-bold text-slate-900">Abra no seu Celular</h3>
+      <p class="text-xs text-slate-500">Escaneie para visualizar a simulação e o orçamento direto na sua câmera.</p>
+      
+      <div id="qrcode-target" class="flex justify-center py-2"></div>
+
+      <button onclick="fecharModalQRCode()" class="w-full py-2 bg-slate-100 text-slate-700 font-medium rounded-lg hover:bg-slate-200 transition text-sm">
+        Fechar
+      </button>
+    </div>
   </div>
 
   <script>
-    let aberta = false;
-    let precoM2Atual = 120;
-    let nomeModeloAtual = "Tela Solar 3%";
-    let modoMedicao = false;
-    let pontosMedicao = [];
+    // DIGITE SEU NÚMERO DO WHATSAPP AQUI (Com DDD, apenas números)
+    const SEU_NUMERO_WHATSAPP = "5522999633486";
 
-    const canvas = document.getElementById('measureCanvas');
-    const ctx = canvas.getContext('2d');
+    function alterarModo(modo) {
+      const c3d = document.getElementById('container-3d');
+      const c2d = document.getElementById('container-2d');
+      const btn3d = document.getElementById('btn-mode-3d');
+      const btn2d = document.getElementById('btn-mode-2d');
 
-    function redimensionarCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', redimensionarCanvas);
-    redimensionarCanvas();
-
-    async function iniciarCamera() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: "environment" } 
-        });
-        document.getElementById('videoCam').srcObject = stream;
-      } catch (err) {
-        console.error("Erro na câmera: ", err);
+      if (modo === '3d') {
+        c3d.classList.remove('hidden');
+        c2d.classList.add('hidden');
+        btn3d.className = 'px-4 py-1.5 rounded-lg bg-white shadow-sm text-slate-900 transition';
+        btn2d.className = 'px-4 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition';
+      } else {
+        c3d.classList.add('hidden');
+        c2d.classList.remove('hidden');
+        btn2d.className = 'px-4 py-1.5 rounded-lg bg-white shadow-sm text-slate-900 transition';
+        btn3d.className = 'px-4 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition';
       }
     }
 
-    function selecionarModelo(cor, opacidade, precoM2, nome, elemento) {
-      const tecido = document.getElementById('tecido');
-      tecido.style.backgroundColor = cor;
-      tecido.style.opacity = opacidade;
+    function atualizarCalculos() {
+      const largura = parseFloat(document.getElementById('input-largura').value) || 0;
+      const altura = parseFloat(document.getElementById('input-altura').value) || 0;
+      const precoMetro = parseFloat(document.getElementById('select-tecido').value) || 0;
 
-      precoM2Atual = precoM2;
-      nomeModeloAtual = nome;
-      document.getElementById('txtModelo').innerText = nome;
+      const area = largura * altura;
+      const total = area * precoMetro;
 
-      document.querySelectorAll('.botoes-modelo .btn').forEach(b => b.classList.remove('ativo'));
-      elemento.classList.add('ativo');
-
-      calcularValores();
+      document.getElementById('txt-area').innerText = `${area.toFixed(2)} m²`;
+      document.getElementById('txt-preco').innerText = `R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
     }
 
-    function calcularValores() {
-      const largura = parseFloat(document.getElementById('largura').value) || 0;
-      const altura = parseFloat(document.getElementById('altura').value) || 0;
+    function enviarOrcamentoWhatsApp() {
+      const largura = document.getElementById('input-largura').value;
+      const altura = document.getElementById('input-altura').value;
+      const selectTecido = document.getElementById('select-tecido');
+      const tecidoNome = selectTecido.options[selectTecido.selectedIndex].text;
+      const area = document.getElementById('txt-area').innerText;
+      const preco = document.getElementById('txt-preco').innerText;
 
-      const areaReal = largura * altura;
-      const areaFaturada = Math.max(areaReal, 1.5); 
-      let total = areaFaturada * precoM2Atual;
+      // Monta a mensagem para o WhatsApp
+      const mensagem = `Olá! Gostaria de solicitar um orçamento baseado na simulação do site:%0A%0A` +
+        `📏 *Largura:* ${largura} m%0A` +
+        `📐 *Altura:* ${altura} m%0A` +
+        `🎨 *Modelo/Tecido:* ${tecidoNome}%0A` +
+        `📊 *Área Total:* ${area}%0A` +
+        `💰 *Valor Estimado:* ${preco}`;
 
-      if (document.getElementById('chkBando').checked) total += largura * 40;
-      if (document.getElementById('chkMotor').checked) total += 350;
-
-      document.getElementById('txtArea').innerText = areaReal.toFixed(2) + " m²";
-      document.getElementById('txtTotal').innerText = "R$ " + total.toFixed(2).replace('.', ',');
-
-      const persianaBox = document.getElementById('persianaBox');
-      const tecido = document.getElementById('tecido');
-
-      const larguraPx = Math.round(largura * 130);
-      const alturaPx = Math.round(altura * 130);
-
-      persianaBox.style.width = larguraPx + "px";
-      if (!aberta) tecido.style.setProperty('height', alturaPx + 'px', 'important');
+      const url = `https://wa.me/${5522999633486}?text=${mensagem}`;
+      window.open(url, '_blank');
     }
 
-    /* MEDIÇÃO EM 4 PONTOS (2 LARGURA + 2 ALTURA) */
-    function iniciarMedicao() {
-      modoMedicao = true;
-      pontosMedicao = [];
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const status = document.getElementById('statusMedicao');
-      status.style.display = 'block';
-      status.innerText = "Toque 2 vezes: extremidades da LARGURA ↔️";
+    function gerarQRCodeProposta() {
+      const modal = document.getElementById('modal-qrcode');
+      const target = document.getElementById('qrcode-target');
+      target.innerHTML = '';
+
+      const largura = document.getElementById('input-largura').value;
+      const altura = document.getElementById('input-altura').value;
+      const url = `${window.location.href}?w=${largura}&h=${altura}`;
+
+      new QRCode(target, {
+        text: url,
+        width: 180,
+        height: 180
+      });
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
     }
 
-    window.addEventListener('touchstart', (e) => {
-      if (!modoMedicao) return;
-      const touch = e.touches[0];
-      pontosMedicao.push({ x: touch.clientX, y: touch.clientY });
-
-      desenharMedicao();
-
-      const status = document.getElementById('statusMedicao');
-
-      if (pontosMedicao.length === 2) {
-        status.innerText = "Agora toque 2 vezes: extremidades da ALTURA ↕️";
-      }
-
-      if (pontosMedicao.length === 4) {
-        // Cálculo da Largura (Primeiros 2 pontos)
-        const dxL = pontosMedicao[1].x - pontosMedicao[0].x;
-        const dyL = pontosMedicao[1].y - pontosMedicao[0].y;
-        const distLarguraPx = Math.sqrt(dxL * dxL + dyL * dyL);
-        const novaLargura = Math.max(0.5, (distLarguraPx / 130)).toFixed(2);
-
-        // Cálculo da Altura (Últimos 2 pontos)
-        const dxA = pontosMedicao[3].x - pontosMedicao[2].x;
-        const dyA = pontosMedicao[3].y - pontosMedicao[2].y;
-        const distAlturaPx = Math.sqrt(dxA * dxA + dyA * dyA);
-        const novaAltura = Math.max(0.5, (distAlturaPx / 130)).toFixed(2);
-
-        // Atualização dos inputs
-        document.getElementById('largura').value = novaLargura;
-        document.getElementById('altura').value = novaAltura;
-
-        calcularValores();
-
-        status.innerText = "Medição concluída! ✅";
-        modoMedicao = false;
-
-        setTimeout(() => {
-          status.style.display = 'none';
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-        }, 2200);
-      }
-    });
-
-    function desenharMedicao() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.lineWidth = 3;
-
-      // Desenhar Pontos de Largura (Vermelhos)
-      for (let i = 0; i < Math.min(pontosMedicao.length, 2); i++) {
-        ctx.fillStyle = '#ff0055';
-        ctx.beginPath();
-        ctx.arc(pontosMedicao[i].x, pontosMedicao[i].y, 8, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      if (pontosMedicao.length >= 2) {
-        ctx.strokeStyle = '#ff0055';
-        ctx.beginPath();
-        ctx.moveTo(pontosMedicao[0].x, pontosMedicao[0].y);
-        ctx.lineTo(pontosMedicao[1].x, pontosMedicao[1].y);
-        ctx.stroke();
-      }
-
-      // Desenhar Pontos de Altura (Azuis)
-      for (let i = 2; i < pontosMedicao.length; i++) {
-        ctx.fillStyle = '#007bff';
-        ctx.beginPath();
-        ctx.arc(pontosMedicao[i].x, pontosMedicao[i].y, 8, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      if (pontosMedicao.length === 4) {
-        ctx.strokeStyle = '#007bff';
-        ctx.beginPath();
-        ctx.moveTo(pontosMedicao[2].x, pontosMedicao[2].y);
-        ctx.lineTo(pontosMedicao[3].x, pontosMedicao[3].y);
-        ctx.stroke();
-      }
+    function fecharModalQRCode() {
+      const modal = document.getElementById('modal-qrcode');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
     }
-
-    // ARRASTE TOUCH
-    const el = document.getElementById('persianaBox');
-    let isDragging = false, currentX = 0, currentY = 0, initialX = 0, initialY = 0, xOffset = 0, yOffset = 0;
-
-    el.addEventListener("touchstart", dragStart, false);
-    el.addEventListener("touchend", dragEnd, false);
-    el.addEventListener("touchmove", drag, false);
-
-    function dragStart(e) {
-      if (modoMedicao) return;
-      initialX = e.touches[0].clientX - xOffset;
-      initialY = e.touches[0].clientY - yOffset;
-      if (e.target.closest('#persianaBox')) isDragging = true;
-    }
-
-    function dragEnd() {
-      initialX = currentX; initialY = currentY;
-      isDragging = false;
-    }
-
-    function drag(e) {
-      if (isDragging && !modoMedicao) {
-        currentX = e.touches[0].clientX - initialX;
-        currentY = e.touches[0].clientY - initialY;
-        xOffset = currentX; yOffset = currentY;
-        el.style.transform = `translate(calc(-50% + ${currentX}px), ${currentY}px)`;
-      }
-    }
-
-    function enviarWhatsApp() {
-      const largura = document.getElementById('largura').value;
-      const altura = document.getElementById('altura').value;
-      const area = document.getElementById('txtArea').innerText;
-      const total = document.getElementById('txtTotal').innerText;
-      
-      let adicionais = [];
-      if (document.getElementById('chkBando').checked) adicionais.push("Bandô");
-      if (document.getElementById('chkMotor').checked) adicionais.push("Motorização");
-      const textoAdicionais = adicionais.length > 0 ? adicionais.join(", ") : "Nenhum";
-
-      const mensagem = `Olá! Segue o orçamento da sua persiana:%0A%0A` +
-        `📌 *Modelo:* ${nomeModeloAtual}%0A` +
-        `📐 *Medidas:* ${largura}m x ${altura}m (${area})%0A` +
-        `⚙️ *Opcionais:* ${textoAdicionais}%0A` +
-        `💰 *Valor Total:* ${total}%0A%0A` +
-        `Orçamento gerado pelo Simulador RA.`;
-
-      window.open(`https://api.whatsapp.com/send?text=${mensagem}`, '_blank');
-    }
-
-    iniciarCamera();
-    calcularValores();
   </script>
-
 </body>
 </html>
