@@ -60,7 +60,7 @@
           <div class="flex items-center gap-3 w-full">
             <span id="txt-label-slider" class="whitespace-nowrap font-semibold">Abertura / Recolhimento:</span>
             <input type="range" id="slider-abertura" min="0" max="100" value="0" oninput="atualizarAberturaPersiana(this.value)" class="w-full accent-indigo-600 cursor-pointer h-2 bg-slate-200 rounded-lg" />
-            <span id="txt-abertura-val" class="font-bold text-indigo-600 min-w-[35px] text-right">100%</span>
+            <span id="txt-abertura-val" class="font-bold text-indigo-600 min-w-[35px] text-right">0%</span>
           </div>
 
           <!-- Controles Extras para Vertical (Abertura Lateral / Central) -->
@@ -342,7 +342,7 @@
       atualizarModelo3D();
     }
 
-    // Cria a textura listrada física para o Double Vision (uma camada rolando sobre a outra)
+    // Cria a textura listrada física para o Double Vision
     function criarTexturaDoubleVision(corHex) {
       const canvasTex = document.createElement('canvas');
       canvasTex.width = 128;
@@ -355,9 +355,9 @@
       for (let i = 0; i < totalFaixas; i++) {
         const y = i * alturaFaixa;
         if (i % 2 === 0) {
-          ctxTex.fillStyle = corHex; // Faixa Sólida
+          ctxTex.fillStyle = corHex;
         } else {
-          ctxTex.fillStyle = "rgba(0,0,0,0.15)"; // Faixa Translúcida vazada
+          ctxTex.fillStyle = "rgba(0,0,0,0.15)";
         }
         ctxTex.fillRect(0, y, canvasTex.width, alturaFaixa);
       }
@@ -423,10 +423,10 @@
       tecidoFrontMesh.position.y = 0;
       persianaGroup.add(tecidoFrontMesh);
 
-      // Camada Traseira para o Double Vision (gerando a sobreposição física real)
+      // Camada Traseira para o Double Vision
       const tecidoBackGeo = new THREE.PlaneGeometry(1.5, 1.8, 1, 30);
       tecidoBackMesh = new THREE.Mesh(tecidoBackGeo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, transparent: true, opacity: 0.85 }));
-      tecidoBackMesh.position.set(0, 0, -0.03); // Ligeiramente atrás
+      tecidoBackMesh.position.set(0, 0, -0.03);
       persianaGroup.add(tecidoBackMesh);
 
       // Barra Inferior
@@ -492,34 +492,29 @@
 
     function atualizarAberturaPersiana(val) {
       percentualAbertura = parseFloat(val);
-      const porcentagemAberturaDecimal = percentualAbertura / 100;
-      const porcentagemFechada = (100 - percentualAbertura) / 100;
-      document.getElementById('txt-abertura-val').innerText = `${Math.round(porcentagemFechada * 100)}%`;
+      const progresso = percentualAbertura / 100; // 0 (fechada/baixo) até 1 (totalmente aberta/recolhida em cima)
+      
+      // Texto informativo da porcentagem de recolhimento
+      document.getElementById('txt-abertura-val').innerText = `${Math.round(progresso * 100)}%`;
 
       const modeloKey = document.getElementById('select-modelo').value;
 
       if (modeloKey === 'double_vision') {
-        // Efeito de listras correndo uma por cima da outra: 
-        // A camada frontal fica fixa e a camada traseira se desloca verticalmente em sentido oposto,
-        // fazendo as listras se alinharem perfeitamente (tecido fechado) e se alternarem (tecido aberto).
         tecidoFrontMesh.visible = true;
         tecidoBackMesh.visible = true;
         if (grupoGomos) grupoGomos.visible = false;
         if (grupoLâminasVerticais) grupoLâminasVerticais.visible = false;
         if (pesoMesh) pesoMesh.visible = true;
 
-        const alturaBase = 1.8;
         tecidoFrontMesh.scale.y = 1;
         tecidoFrontMesh.position.y = 0;
         
-        // Deslocamento da camada de trás em relação à frente para criar o traspasse
         const deslocamentoMaximo = 0.4;
-        tecidoBackMesh.position.y = (porcentagemAberturaDecimal * deslocamentoMaximo);
-
+        tecidoBackMesh.position.y = (progresso * deslocamentoMaximo);
         pesoMesh.position.y = -0.9;
 
       } else if (modeloKey === 'romana') {
-        // Persiana Romana: recolhe formando gomos empilhados na parte superior
+        // Persiana Romana corrigida: 0% = totalmente descida, 100% = totalmente recolhida com gomos no topo
         tecidoFrontMesh.visible = false;
         tecidoBackMesh.visible = false;
         if (grupoLâminasVerticais) grupoLâminasVerticais.visible = false;
@@ -528,25 +523,27 @@
           const gomos = grupoGomos.children;
           const totalGomos = gomos.length;
           
-          // Quantos gomos devem ser recolhidos para cima com base no slider
-          const gomosRecolhidos = Math.floor(porcentagemAberturaDecimal * totalGomos);
+          // Quantos gomos devem ser recolhidos para cima (do último para o primeiro)
+          const gomosRecolhidos = Math.floor(progresso * totalGomos);
           
           gomos.forEach((gomo, index) => {
             if (index < gomosRecolhidos) {
-              // Empilha o gomo no topo
-              gomo.position.y = 0.85 - (index * 0.02);
-              gomo.scale.y = 0.1;
+              // Gomo recolhido e empilhado no topo
+              gomo.position.y = 0.82 - (index * 0.015);
+              gomo.scale.y = 0.15;
+              gomo.visible = true;
             } else {
-              // Gomo estendido na altura normal
-              gomo.position.y = 0.7 - (index * 0.18);
+              // Gomo estendido na posição correta
+              gomo.position.y = 0.7 - (index * 0.15);
               gomo.scale.y = 1;
+              gomo.visible = (progresso < 0.98); // some apenas se totalmente recolhida
             }
           });
         }
         if (pesoMesh) pesoMesh.visible = false;
 
       } else if (modeloKey === 'vertical') {
-        // Persiana Vertical: abre para as laterais ou central
+        // Persiana Vertical corrigida para estacionar nos cantos corretamente
         tecidoFrontMesh.visible = false;
         tecidoBackMesh.visible = false;
         if (grupoGomos) grupoGomos.visible = false;
@@ -556,26 +553,33 @@
           const tipoAbertura = document.querySelector('input[name="tipo-abertura-vert"]:checked').value;
           const lâminas = grupoLâminasVerticais.children;
           const total = lâminas.length;
-          const meio = total / 2;
+          const larguraJanela = 1.48;
+          const larguraLaminaOriginal = larguraJanela / total;
 
           lâminas.forEach((lam, index) => {
+            const posXOriginal = -0.74 + (index * larguraLaminaOriginal) + (larguraLaminaOriginal / 2);
+
             if (tipoAbertura === 'lateral') {
-              // Recolhe da direita para a esquerda (ou vice-versa)
-              const limiteRecolhido = Math.floor(porcentagemAberturaDecimal * total);
-              if (index < limiteRecolhido) {
-                lam.scale.x = 0.05; // Lamina comprimida na lateral
-                lam.visible = false;
-              } else {
+              // Recolhe todas empilhadas no canto esquerdo (ou direito)
+              const fatorEmpilhamento = 1 - progresso;
+              lam.position.x = -0.74 + (posXOriginal - (-0.74)) * (1 - progresso) + (progresso * 0.02);
+              lam.scale.x = Math.max(0.04, fatorEmpilhamento);
+              lam.visible = true;
+            } else {
+              // Abertura Central (metade esquerda vai para o canto esquerdo, metade direita vai para o canto direito)
+              const meio = total / 2;
+              const distDoCentro = index - meio; // negativo esquerda, positivo direita
+              
+              if (progresso === 0) {
+                lam.position.x = posXOriginal;
                 lam.scale.x = 1;
                 lam.visible = true;
-              }
-            } else {
-              // Abertura Central (metade para a esquerda, metade para a direita)
-              const limiteMetade = Math.floor((porcentagemAberturaDecimal * total) / 2);
-              const distDoCentro = Math.abs(index - meio);
-              if (distDoCentro < limiteMetade) {
-                lam.visible = false;
               } else {
+                const direcao = distDoCentro >= 0 ? 1 : -1;
+                const alvoX = direcao > 0 ? (0.74 - Math.abs(distDoCentro) * 0.02) : (-0.74 + Math.abs(distDoCentro) * 0.02);
+                
+                lam.position.x = posXOriginal + (alvoX - posXOriginal) * progresso;
+                lam.scale.x = Math.max(0.04, 1 - progresso);
                 lam.visible = true;
               }
             }
@@ -591,6 +595,7 @@
         if (pesoMesh) pesoMesh.visible = true;
 
         const alturaBase = 1.8;
+        const porcentagemFechada = (100 - percentualAbertura) / 100;
         const novaAlturaGeo = Math.max(0.05, alturaBase * porcentagemFechada);
 
         tecidoFrontMesh.scale.y = Math.max(0.02, porcentagemFechada);
@@ -634,17 +639,17 @@
         tecidoBackMesh.material.needsUpdate = true;
 
       } else if (modeloKey === 'romana') {
-        // Constrói os gomos da persiana romana
+        // Constrói os gomos tridimensionais encorpados da persiana romana
         if (grupoGomos) {
           while(grupoGomos.children.length > 0){ 
             grupoGomos.remove(grupoGomos.children[0]); 
           }
-          const qtdGomos = 10;
+          const qtdGomos = 12;
           for(let i=0; i<qtdGomos; i++) {
-            const gomoGeo = new THREE.BoxGeometry(1.48, 0.16, 0.02);
+            const gomoGeo = new THREE.BoxGeometry(1.48, 0.14, 0.04);
             const gomoMat = new THREE.MeshBasicMaterial({ color: corTecidoHex });
             const gomo = new THREE.Mesh(gomoGeo, gomoMat);
-            gomo.position.y = 0.7 - (i * 0.18);
+            gomo.position.y = 0.7 - (i * 0.14);
             grupoGomos.add(gomo);
           }
         }
@@ -657,7 +662,7 @@
           const qtdLaminas = 18;
           const larguraLamina = 1.48 / qtdLaminas;
           for(let i=0; i<qtdLaminas; i++) {
-            const lamGeo = new THREE.BoxGeometry(larguraLamina * 0.95, 1.7, 0.015);
+            const lamGeo = new THREE.BoxGeometry(larguraLamina * 0.95, 1.7, 0.02);
             const lamMat = new THREE.MeshBasicMaterial({ color: corTecidoHex });
             const lamina = new THREE.Mesh(lamGeo, lamMat);
             lamina.position.x = -0.74 + (i * larguraLamina) + (larguraLamina / 2);
