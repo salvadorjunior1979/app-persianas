@@ -63,15 +63,22 @@
             <span id="txt-abertura-val" class="font-bold text-indigo-600 min-w-[35px] text-right">0%</span>
           </div>
 
-          <!-- Controles Extras para Vertical (Abertura Lateral / Central) -->
-          <div id="painel-opcoes-vertical" class="hidden flex items-center gap-4 pt-2 border-t border-slate-200/60">
-            <span class="font-semibold text-slate-600">Tipo de Abertura:</span>
-            <label class="flex items-center gap-1.5 cursor-pointer">
-              <input type="radio" name="tipo-abertura-vert" value="lateral" checked onchange="atualizarModelo3D()" class="accent-indigo-600"> Lateral
-            </label>
-            <label class="flex items-center gap-1.5 cursor-pointer">
-              <input type="radio" name="tipo-abertura-vert" value="central" onchange="atualizarModelo3D()" class="accent-indigo-600"> Central (Bipartida)
-            </label>
+          <!-- Controles Extras para Vertical (Abertura Lateral / Central e Giro das Lâminas) -->
+          <div id="painel-opcoes-vertical" class="hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 border-t border-slate-200/60">
+            <div class="flex items-center gap-3">
+              <span class="font-semibold text-slate-600">Abertura:</span>
+              <label class="flex items-center gap-1 cursor-pointer">
+                <input type="radio" name="tipo-abertura-vert" value="lateral" checked onchange="atualizarModelo3D()" class="accent-indigo-600"> Lateral
+              </label>
+              <label class="flex items-center gap-1 cursor-pointer">
+                <input type="radio" name="tipo-abertura-vert" value="central" onchange="atualizarModelo3D()" class="accent-indigo-600"> Central
+              </label>
+            </div>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <span class="font-semibold text-slate-600 whitespace-nowrap">Giro Frestas:</span>
+              <input type="range" id="slider-giro-vertical" min="0" max="90" value="0" oninput="atualizarGiroVertical(this.value)" class="w-28 accent-indigo-600 cursor-pointer h-2 bg-slate-200 rounded-lg" />
+              <span id="txt-giro-val" class="font-bold text-indigo-600 min-w-[25px]">0°</span>
+            </div>
           </div>
 
           <div class="flex gap-2 justify-end pt-2 border-t border-slate-200/60">
@@ -279,6 +286,7 @@
     let grupoGomos = null;
     let grupoLâminasVerticais = null;
     let percentualAbertura = 0;
+    let anguloGiroVertical = 0;
 
     function inicializarCatalogo() {
       const selectModelo = document.getElementById('select-modelo');
@@ -301,13 +309,13 @@
       const painelVert = document.getElementById('painel-opcoes-vertical');
       
       if (modeloKey === 'double_vision') {
-        txtSlider.innerText = "Double Vision (Transpasse de Listras):";
+        txtSlider.innerText = "Double Vision (Transpasse / Giro Contínuo):";
         painelVert.classList.add('hidden');
       } else if (modeloKey === 'romana') {
         txtSlider.innerText = "Romana (Recolher Gomos):";
         painelVert.classList.add('hidden');
       } else if (modeloKey === 'vertical') {
-        txtSlider.innerText = "Vertical (Recolhimento Lateral/Central):";
+        txtSlider.innerText = "Vertical (Recolhimento / Abertura):";
         painelVert.classList.remove('hidden');
       } else {
         txtSlider.innerText = "Rolô (Abrir/Fechar):";
@@ -492,29 +500,33 @@
 
     function atualizarAberturaPersiana(val) {
       percentualAbertura = parseFloat(val);
-      const progresso = percentualAbertura / 100; // 0 (fechada/baixo) até 1 (totalmente aberta/recolhida em cima)
+      const progresso = percentualAbertura / 100;
       
-      // Texto informativo da porcentagem de recolhimento
       document.getElementById('txt-abertura-val').innerText = `${Math.round(progresso * 100)}%`;
 
       const modeloKey = document.getElementById('select-modelo').value;
 
       if (modeloKey === 'double_vision') {
+        // Double Vision corrigido com loop contínuo e rolagem sincronizada frente e verso
         tecidoFrontMesh.visible = true;
         tecidoBackMesh.visible = true;
         if (grupoGomos) grupoGomos.visible = false;
         if (grupoLâminasVerticais) grupoLâminasVerticais.visible = false;
         if (pesoMesh) pesoMesh.visible = true;
 
-        tecidoFrontMesh.scale.y = 1;
-        tecidoFrontMesh.position.y = 0;
+        const alturaBase = 1.8;
+        const fatorRolagem = (1 - progresso);
         
-        const deslocamentoMaximo = 0.4;
-        tecidoBackMesh.position.y = (progresso * deslocamentoMaximo);
-        pesoMesh.position.y = -0.9;
+        // Ajusta escala e posição simulando o tecido dobrando pela barra inferior e subindo em direção ao rolo
+        tecidoFrontMesh.scale.y = Math.max(0.02, fatorRolagem);
+        tecidoFrontMesh.position.y = (progresso * (alturaBase / 2));
+        
+        tecidoBackMesh.scale.y = Math.max(0.02, fatorRolagem);
+        tecidoBackMesh.position.y = -(progresso * (alturaBase / 2));
+
+        pesoMesh.position.y = -0.9 + (progresso * 1.75);
 
       } else if (modeloKey === 'romana') {
-        // Persiana Romana corrigida: 0% = totalmente descida, 100% = totalmente recolhida com gomos no topo
         tecidoFrontMesh.visible = false;
         tecidoBackMesh.visible = false;
         if (grupoLâminasVerticais) grupoLâminasVerticais.visible = false;
@@ -522,28 +534,23 @@
           grupoGomos.visible = true;
           const gomos = grupoGomos.children;
           const totalGomos = gomos.length;
-          
-          // Quantos gomos devem ser recolhidos para cima (do último para o primeiro)
           const gomosRecolhidos = Math.floor(progresso * totalGomos);
           
           gomos.forEach((gomo, index) => {
             if (index < gomosRecolhidos) {
-              // Gomo recolhido e empilhado no topo
               gomo.position.y = 0.82 - (index * 0.015);
               gomo.scale.y = 0.15;
               gomo.visible = true;
             } else {
-              // Gomo estendido na posição correta
               gomo.position.y = 0.7 - (index * 0.15);
               gomo.scale.y = 1;
-              gomo.visible = (progresso < 0.98); // some apenas se totalmente recolhida
+              gomo.visible = (progresso < 0.98);
             }
           });
         }
         if (pesoMesh) pesoMesh.visible = false;
 
       } else if (modeloKey === 'vertical') {
-        // Persiana Vertical corrigida para estacionar nos cantos corretamente
         tecidoFrontMesh.visible = false;
         tecidoBackMesh.visible = false;
         if (grupoGomos) grupoGomos.visible = false;
@@ -560,15 +567,13 @@
             const posXOriginal = -0.74 + (index * larguraLaminaOriginal) + (larguraLaminaOriginal / 2);
 
             if (tipoAbertura === 'lateral') {
-              // Recolhe todas empilhadas no canto esquerdo (ou direito)
               const fatorEmpilhamento = 1 - progresso;
               lam.position.x = -0.74 + (posXOriginal - (-0.74)) * (1 - progresso) + (progresso * 0.02);
               lam.scale.x = Math.max(0.04, fatorEmpilhamento);
               lam.visible = true;
             } else {
-              // Abertura Central (metade esquerda vai para o canto esquerdo, metade direita vai para o canto direito)
               const meio = total / 2;
-              const distDoCentro = index - meio; // negativo esquerda, positivo direita
+              const distDoCentro = index - meio;
               
               if (progresso === 0) {
                 lam.position.x = posXOriginal;
@@ -587,7 +592,7 @@
         }
 
       } else {
-        // Rolô Comum (Blackout / Tela Solar)
+        // Rolô Comum
         tecidoFrontMesh.visible = true;
         tecidoBackMesh.visible = false;
         if (grupoGomos) grupoGomos.visible = false;
@@ -601,6 +606,18 @@
         tecidoFrontMesh.scale.y = Math.max(0.02, porcentagemFechada);
         tecidoFrontMesh.position.y = 0.9 - (novaAlturaGeo / 2);
         if (pesoMesh) pesoMesh.position.y = 0.9 - novaAlturaGeo;
+      }
+    }
+
+    function atualizarGiroVertical(val) {
+      anguloGiroVertical = parseFloat(val);
+      document.getElementById('txt-giro-val').innerText = `${anguloGiroVertical}°`;
+      
+      if (grupoLâminasVerticais && grupoLâminasVerticais.visible) {
+        const radianos = THREE.MathUtils.degToRad(anguloGiroVertical);
+        grupoLâminasVerticais.children.forEach(lam => {
+          lam.rotation.y = radianos;
+        });
       }
     }
 
@@ -639,7 +656,6 @@
         tecidoBackMesh.material.needsUpdate = true;
 
       } else if (modeloKey === 'romana') {
-        // Constrói os gomos tridimensionais encorpados da persiana romana
         if (grupoGomos) {
           while(grupoGomos.children.length > 0){ 
             grupoGomos.remove(grupoGomos.children[0]); 
@@ -654,7 +670,6 @@
           }
         }
       } else if (modeloKey === 'vertical') {
-        // Constrói as lâminas verticais
         if (grupoLâminasVerticais) {
           while(grupoLâminasVerticais.children.length > 0){ 
             grupoLâminasVerticais.remove(grupoLâminasVerticais.children[0]); 
@@ -705,6 +720,7 @@
       }
 
       atualizarAberturaPersiana(percentualAbertura);
+      atualizarGiroVertical(anguloGiroVertical);
       desenharCanvas();
     }
 
