@@ -8,7 +8,7 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Three.js CDN para renderização 3D WebGL sobre a câmera -->
+  <!-- Three.js CDN para renderização 3D WebGL leve -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   
@@ -50,23 +50,23 @@
       </div>
 
       <!-- Modo 1: Projeção 3D com Câmera ao Fundo em Tempo Real -->
-      <div id="container-3d-webgl" class="relative w-full h-[450px] md:h-[550px] bg-slate-900 rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center">
-        <!-- Feed de Vídeo da Câmera -->
-        <video id="camera-video" autoplay playsinline class="absolute inset-0 w-full h-full object-cover hidden"></video>
+      <div id="container-3d-webgl" class="flex flex-col gap-3">
+        <!-- Janela de Visualização Limpa -->
+        <div class="relative w-full h-[450px] md:h-[550px] bg-slate-900 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
+          <video id="camera-video" autoplay playsinline class="absolute inset-0 w-full h-full object-cover hidden"></video>
+          <div id="canvas-webgl-container" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing z-10"></div>
+        </div>
 
-        <!-- Canvas 3D Transparente sobreposto à Câmera -->
-        <div id="canvas-webgl-container" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing z-10"></div>
-        
-        <!-- Botão para Ativar/Desativar Câmera e Controles -->
-        <div class="absolute bottom-4 left-4 right-4 z-20 glass-panel p-3 rounded-xl shadow-md text-xs font-medium text-slate-700 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <!-- Painel de Controle POSICIONADO FORA E ABAIXO DA JANELA -->
+        <div class="glass-panel p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-center gap-3 text-xs font-medium text-slate-700">
           <div class="flex items-center gap-2 w-full sm:w-auto flex-1">
-            <span class="whitespace-nowrap font-semibold">Abrir/Fechar:</span>
+            <span class="whitespace-nowrap font-semibold">Abrir / Fechar:</span>
             <input type="range" id="slider-abertura" min="0" max="100" value="0" oninput="atualizarAberturaPersiana(this.value)" class="w-full accent-indigo-600 cursor-pointer" />
             <span id="txt-abertura-val" class="font-bold text-indigo-600 min-w-[35px]">100%</span>
           </div>
-          <div class="flex gap-2 w-full sm:w-auto">
-            <button id="btn-toggle-camera" onclick="alternarCamera()" class="bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition w-full sm:w-auto font-semibold">Ligar Câmera</button>
-            <button onclick="resetarCamera3D()" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-300 transition w-full sm:w-auto">Centralizar</button>
+          <div class="flex gap-2 w-full sm:w-auto justify-end">
+            <button id="btn-toggle-camera" onclick="alternarCamera()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-semibold">Ligar Câmera</button>
+            <button onclick="resetarCamera3D()" class="bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300 transition font-semibold">Centralizar</button>
           </div>
         </div>
       </div>
@@ -233,27 +233,29 @@
       const btn = document.getElementById('btn-toggle-camera');
 
       if (streamCamera) {
-        // Desliga a câmera
         streamCamera.getTracks().forEach(track => track.stop());
         streamCamera = null;
         video.classList.add('hidden');
         btn.innerText = "Ligar Câmera";
-        btn.className = "bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition w-full sm:w-auto font-semibold";
+        btn.className = "bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-semibold";
       } else {
-        // Liga a câmera traseira em tempo real
         try {
           streamCamera = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { exact: "environment" } },
+            video: { facingMode: "environment" },
             audio: false
           });
         } catch (e) {
-          // Fallback caso não encontre a traseira exata
-          streamCamera = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          try {
+            streamCamera = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          } catch (err) {
+            alert("Não foi possível acessar a câmera. Verifique as permissões do navegador.");
+            return;
+          }
         }
         video.srcObject = streamCamera;
         video.classList.remove('hidden');
         btn.innerText = "Desligar Câmera";
-        btn.className = "bg-rose-600 text-white px-3 py-1.5 rounded-lg hover:bg-rose-700 transition w-full sm:w-auto font-semibold";
+        btn.className = "bg-rose-600 text-white px-4 py-2 rounded-lg hover:bg-rose-700 transition font-semibold";
       }
     }
 
