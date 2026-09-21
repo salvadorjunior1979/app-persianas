@@ -63,7 +63,7 @@
             <span id="txt-abertura-val" class="font-bold text-indigo-600 min-w-[35px] text-right">0%</span>
           </div>
 
-          <!-- Controles Extras para Vertical (Abertura Lateral / Central e Giro das Lâminas) -->
+          <!-- Controles Extras para Vertical -->
           <div id="painel-opcoes-vertical" class="hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2 border-t border-slate-200/60">
             <div class="flex items-center gap-3">
               <span class="font-semibold text-slate-600">Abertura:</span>
@@ -137,7 +137,7 @@
           </select>
         </div>
 
-        <!-- Cor dos Acabamentos / Alumínios / Barras -->
+        <!-- Cor dos Acabamentos -->
         <div id="grupo-cor-aluminio">
           <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cor dos Acabamentos e Trilhos</label>
           <select id="select-acabamento-cor" onchange="atualizarModelo3D();" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium">
@@ -309,7 +309,7 @@
       const painelVert = document.getElementById('painel-opcoes-vertical');
       
       if (modeloKey === 'double_vision') {
-        txtSlider.innerText = "Double Vision (Transpasse / Giro Contínuo):";
+        txtSlider.innerText = "Double Vision (Transpasse Contínuo):";
         painelVert.classList.add('hidden');
       } else if (modeloKey === 'romana') {
         txtSlider.innerText = "Romana (Recolher Gomos):";
@@ -356,7 +356,7 @@
       canvasTex.height = 512;
       const ctxTex = canvasTex.getContext('2d');
 
-      const alturaFaixa = 40;
+      const alturaFaixa = 32;
       const totalFaixas = canvasTex.height / alturaFaixa;
 
       for (let i = 0; i < totalFaixas; i++) {
@@ -364,7 +364,7 @@
         if (i % 2 === 0) {
           ctxTex.fillStyle = corHex;
         } else {
-          ctxTex.fillStyle = "rgba(0,0,0,0.15)";
+          ctxTex.fillStyle = "rgba(0,0,0,0.12)";
         }
         ctxTex.fillRect(0, y, canvasTex.width, alturaFaixa);
       }
@@ -372,6 +372,7 @@
       const texture = new THREE.CanvasTexture(canvasTex);
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(1, 8);
       return texture;
     }
 
@@ -506,15 +507,23 @@
         if (pesoMesh) pesoMesh.visible = true;
 
         const alturaBase = 1.8;
-        const fatorRolagem = Math.max(0.02, 1 - progresso);
+        const alturaAtual = alturaBase * (1 - progresso * 0.92);
         
-        tecidoFrontMesh.scale.y = fatorRolagem;
-        tecidoFrontMesh.position.y = (progresso * (alturaBase / 2));
-        
-        tecidoBackMesh.scale.y = fatorRolagem;
-        tecidoBackMesh.position.y = (progresso * (alturaBase / 2));
+        tecidoFrontMesh.scale.y = Math.max(0.05, 1 - progresso);
+        tecidoFrontMesh.position.y = 0.9 - (alturaAtual / 2);
 
-        pesoMesh.position.y = -0.9 + (progresso * 1.75);
+        tecidoBackMesh.scale.y = Math.max(0.05, 1 - progresso);
+        tecidoBackMesh.position.y = 0.9 - (alturaAtual / 2);
+
+        if (tecidoFrontMesh.material.map) {
+          tecidoFrontMesh.material.map.offset.y = progresso * 2.5;
+        }
+        if (tecidoBackMesh.material.map) {
+          tecidoBackMesh.material.map.offset.y = progresso * 2.5;
+        }
+
+        pesoMesh.position.y = (0.9 - alturaAtual) - 0.02;
+        pesoMesh.visible = (progresso < 0.96);
 
       } else if (modeloKey === 'romana') {
         tecidoFrontMesh.visible = false;
@@ -523,19 +532,14 @@
         if (grupoGomos) {
           grupoGomos.visible = true;
           const gomos = grupoGomos.children;
-          const totalGomos = gomos.length;
-          const gomosRecolhidos = Math.floor(progresso * totalGomos);
           
           gomos.forEach((gomo, index) => {
-            if (index < gomosRecolhidos) {
-              gomo.position.y = 0.82 - (index * 0.04);
-              gomo.scale.y = 0.25;
-              gomo.visible = true;
-            } else {
-              gomo.position.y = 0.6 - (index * 0.35);
-              gomo.scale.y = 1;
-              gomo.visible = (progresso < 0.98);
-            }
+            const yOriginal = 0.6 - (index * 0.35);
+            const yTopo = 0.78 - (index * 0.04);
+            
+            gomo.position.y = yOriginal + (yTopo - yOriginal) * progresso;
+            gomo.scale.y = Math.max(0.15, 1 - (progresso * 0.75));
+            gomo.visible = true;
           });
         }
         if (pesoMesh) pesoMesh.visible = false;
@@ -649,7 +653,7 @@
           while(grupoGomos.children.length > 0){ 
             grupoGomos.remove(grupoGomos.children[0]); 
           }
-          const qtdGomos = 4; // Exatamente 4 gomos solicitados
+          const qtdGomos = 4;
           for(let i=0; i<qtdGomos; i++) {
             const gomoGeo = new THREE.BoxGeometry(1.48, 0.35, 0.04);
             const gomoMat = new THREE.MeshBasicMaterial({ color: corTecidoHex });
