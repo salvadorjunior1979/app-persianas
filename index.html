@@ -8,7 +8,7 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Three.js CDN para renderização 3D WebGL leve -->
+  <!-- Three.js CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   
@@ -249,7 +249,7 @@
     const canvas = document.getElementById('canvas-2d');
     const ctx = canvas.getContext('2d');
 
-    let scene, camera, renderer, controls, persianaGroup, tecidoMesh, pesoMesh, bandoMesh, comandoMesh;
+    let scene, camera, renderer, controls, persianaGroup, tecidoMesh, pesoMesh, bandoMdfMesh, bandoAlumMesh, comandoMesh;
     let percentualAbertura = 0;
 
     function inicializarCatalogo() {
@@ -334,30 +334,51 @@
 
       persianaGroup = new THREE.Group();
 
-      // Bandô 3D Superior
-      const bandoGeo = new THREE.BoxGeometry(1.65, 0.12, 0.14);
-      const bandoMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
-      bandoMesh = new THREE.Mesh(bandoGeo, bandoMat);
-      bandoMesh.position.y = 0.95;
-      persianaGroup.add(bandoMesh);
+      // 1. Bandô MDF Reto (Quadrado)
+      const bandoMdfGeo = new THREE.BoxGeometry(1.65, 0.12, 0.14);
+      const bandoMdfMat = new THREE.MeshStandardMaterial({ roughness: 0.3 });
+      bandoMdfMesh = new THREE.Mesh(bandoMdfGeo, bandoMdfMat);
+      bandoMdfMesh.position.y = 0.95;
+      persianaGroup.add(bandoMdfMesh);
+
+      // 2. Bandô Alumínio Curvo / Arredondado nas pontas
+      const shapeAlum = new THREE.Shape();
+      const ax = -0.825, ay = -0.06, w = 1.65, h = 0.12, r = 0.05;
+      shapeAlum.moveTo(ax, ay + r);
+      shapeAlum.quadraticCurveTo(ax, ay, ax + r, ay);
+      shapeAlum.lineTo(ax + w - r, ay);
+      shapeAlum.quadraticCurveTo(ax + w, ay, ax + w, ay + r);
+      shapeAlum.lineTo(ax + w, ay + h - r);
+      shapeAlum.quadraticCurveTo(ax + w, ay + h, ax + w - r, ay + h);
+      shapeAlum.lineTo(ax + r, ay + h);
+      shapeAlum.quadraticCurveTo(ax, ay + h, ax, ay + h - r);
+      shapeAlum.closePath();
+
+      const extrudeSettings = { depth: 0.14, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: 0.01, bevelThickness: 0.01 };
+      const bandoAlumGeo = new THREE.ExtrudeGeometry(shapeAlum, extrudeSettings);
+      bandoAlumGeo.center();
+      const bandoAlumMat = new THREE.MeshStandardMaterial({ metalness: 0.7, roughness: 0.2 });
+      bandoAlumMesh = new THREE.Mesh(bandoAlumGeo, bandoAlumMat);
+      bandoAlumMesh.position.y = 0.95;
+      persianaGroup.add(bandoAlumMesh);
 
       // Tecido
       const tecidoGeo = new THREE.PlaneGeometry(1.5, 1.8, 1, 30);
-      const tecidoMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, side: THREE.DoubleSide, roughness: 0.5 });
+      const tecidoMat = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.5 });
       tecidoMesh = new THREE.Mesh(tecidoGeo, tecidoMat);
       tecidoMesh.position.y = 0;
       persianaGroup.add(tecidoMesh);
 
       // Barra / Contrapeso Inferior
       const pesoGeo = new THREE.BoxGeometry(1.52, 0.04, 0.04);
-      const pesoMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.8, roughness: 0.2 });
+      const pesoMat = new THREE.MeshStandardMaterial({ metalness: 0.8, roughness: 0.2 });
       pesoMesh = new THREE.Mesh(pesoGeo, pesoMat);
       pesoMesh.position.y = -0.9;
       persianaGroup.add(pesoMesh);
 
       // Comando Lateral (Corrente / Mecanismo)
       const comandoGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.2, 12);
-      const comandoMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 });
+      const comandoMat = new THREE.MeshStandardMaterial({ roughness: 0.4 });
       comandoMesh = new THREE.Mesh(comandoGeo, comandoMat);
       comandoMesh.position.set(0.78, 0.85, 0);
       persianaGroup.add(comandoMesh);
@@ -452,25 +473,30 @@
         tecidoMesh.material.color.set(corTecidoHex);
       }
 
-      // Regra do Bandô: MDF assume a cor do tecido, Alumínio assume a cor de alumínio escolhida
-      if (bandoMesh) {
+      // Controle de visibilidade e materiais dos bandôs
+      if (bandoMdfMesh && bandoAlumMesh) {
         if (tipoBando === 'mdf') {
-          bandoMesh.visible = true;
-          bandoMesh.material.color.set(corTecidoHex);
+          bandoMdfMesh.visible = true;
+          bandoAlumMesh.visible = false;
+          bandoMdfMesh.material.color.set(corTecidoHex); // MDF assume cor do tecido
         } else if (tipoBando === 'aluminio') {
-          bandoMesh.visible = true;
-          bandoMesh.material.color.set(corAluminioHex);
+          bandoMdfMesh.visible = false;
+          bandoAlumMesh.visible = true;
+          bandoAlumMesh.material.color.set(corAluminioHex); // Alumínio curvo assume cor de acabamento
         } else {
-          bandoMesh.visible = false;
+          bandoMdfMesh.visible = false;
+          bandoAlumMesh.visible = false;
         }
       }
 
-      // Barras inferiores e comandos seguem sempre a cor do alumínio selecionada
+      // Força a atualização exata da cor da barra inferior e comando com a cor selecionada de acabamento
       if (pesoMesh) {
         pesoMesh.material.color.set(corAluminioHex);
+        pesoMesh.material.needsUpdate = true;
       }
       if (comandoMesh) {
         comandoMesh.material.color.set(corAluminioHex);
+        comandoMesh.material.needsUpdate = true;
       }
 
       atualizarAberturaPersiana(percentualAbertura);
