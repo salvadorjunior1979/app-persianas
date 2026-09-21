@@ -51,13 +51,11 @@
 
       <!-- Modo 1: Projeção 3D com Câmera ao Fundo -->
       <div id="container-3d-webgl" class="flex flex-col gap-4">
-        <!-- Caixa de visualização 100% limpa -->
         <div class="relative w-full h-[380px] md:h-[460px] bg-slate-900 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
           <video id="camera-video" autoplay playsinline class="absolute inset-0 w-full h-full object-cover hidden"></video>
           <div id="canvas-webgl-container" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing z-10"></div>
         </div>
 
-        <!-- Painel de controlos externo -->
         <div class="glass-panel p-4 rounded-2xl shadow-sm flex flex-col gap-3 text-xs font-medium text-slate-700">
           <div class="flex items-center gap-3 w-full">
             <span id="txt-label-slider" class="whitespace-nowrap font-semibold">Rolô (Abrir/Fechar):</span>
@@ -112,23 +110,22 @@
           </select>
         </div>
 
-        <!-- Cor dos Acabamentos / Alumínios / Barras -->
+        <!-- Tipo / Estilo de Bandô -->
         <div>
-          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cor dos Perfis / Barras / Bandô</label>
-          <select id="select-acabamento-cor" onchange="atualizarModelo3D();" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium">
-            <option value="#f8fafc" data-nome="Branco">Branco</option>
-            <option value="#d4d4d8" data-nome="Bege / Alumínio Natural">Bege / Alumínio Natural</option>
-            <option value="#451a03" data-nome="Marrom">Marrom</option>
-            <option value="#64748b" data-nome="Cinza / Aço Escovado">Cinza / Aço Escovado</option>
-            <option value="#0f172a" data-nome="Preto">Preto</option>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Tipo de Bandô</label>
+          <select id="select-bando" onchange="aoMudarBando(); atualizarCalculos();" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium">
+            <!-- Preenchido via JS -->
           </select>
         </div>
 
-        <!-- Tipo de Bandô -->
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Tipo de Bandô</label>
-          <select id="select-bando" onchange="atualizarCalculos();" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium">
-            <!-- Preenchido via JS -->
+        <!-- Cor dos Acabamentos / Alumínios / Barras (Exibido apenas se for Alumínio) -->
+        <div id="grupo-cor-aluminio">
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cor do Alumínio (Bandô, Barras e Comandos)</label>
+          <select id="select-acabamento-cor" onchange="atualizarModelo3D();" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium">
+            <option value="#f8fafc" data-nome="Branco">Branco</option>
+            <option value="#d4d4d8" data-nome="Bege">Bege</option>
+            <option value="#451a03" data-nome="Marrom">Marrom</option>
+            <option value="#0f172a" data-nome="Preto">Preto</option>
           </select>
         </div>
 
@@ -189,7 +186,6 @@
   <script>
     const SEU_NUMERO_WHATSAPP = "5522999633486";
     
-    // CATÁLOGO COMPLETO DE TECIDOS E PREÇOS
     const catalogoProdutos = {
       "blackout": {
         nome: "Rolô Blackout",
@@ -201,9 +197,9 @@
           { nome: "Marrom Café", hex: "#451a03" }
         ],
         bandos: [
-          { nome: "Sem Bandô", adicional: 0 },
-          { nome: "Bandô Alumínio", adicional: 25 },
-          { nome: "Bandô MDF Reto Amadeirado", adicional: 50 }
+          { nome: "Sem Bandô", adicional: 0, tipo: "nenhum" },
+          { nome: "Bandô Alumínio", adicional: 25, tipo: "aluminio" },
+          { nome: "Bandô MDF Reto Amadeirado", adicional: 50, tipo: "mdf" }
         ]
       },
       "tela_solar": {
@@ -215,8 +211,8 @@
           { nome: "Preto / Antracite", hex: "#0f172a" }
         ],
         bandos: [
-          { nome: "Sem Bandô", adicional: 0 },
-          { nome: "Bandô Alumínio", adicional: 25 }
+          { nome: "Sem Bandô", adicional: 0, tipo: "nenhum" },
+          { nome: "Bandô Alumínio", adicional: 25, tipo: "aluminio" }
         ]
       },
       "double_vision": {
@@ -228,9 +224,8 @@
           { nome: "Caramelo / Linho", hex: "#d97706" }
         ],
         bandos: [
-          { nome: "Bandô Revestido Premium", adicional: 0 },
-          { nome: "Bandô Alumínio", adicional: 40 },
-          { nome: "Bandô MDF Reto", adicional: 60 }
+          { nome: "Bandô Revestido Premium", adicional: 0, tipo: "mdf" },
+          { nome: "Bandô Alumínio", adicional: 40, tipo: "aluminio" }
         ]
       },
       "romana": {
@@ -242,9 +237,9 @@
           { nome: "Tecido Rústico Bege", hex: "#e7e5e4" }
         ],
         bandos: [
-          { nome: "Sem Bandô", adicional: 0 },
-          { nome: "Bandô Revestido no Tecido", adicional: 40 },
-          { nome: "Bandô MDF Reto", adicional: 55 }
+          { nome: "Sem Bandô", adicional: 0, tipo: "nenhum" },
+          { nome: "Bandô Revestido no Tecido", adicional: 40, tipo: "mdf" },
+          { nome: "Bandô Alumínio", adicional: 45, tipo: "aluminio" }
         ]
       }
     };
@@ -254,7 +249,7 @@
     const canvas = document.getElementById('canvas-2d');
     const ctx = canvas.getContext('2d');
 
-    let scene, camera, renderer, controls, persianaGroup, tecidoMesh, pesoMesh, bandoMesh;
+    let scene, camera, renderer, controls, persianaGroup, tecidoMesh, pesoMesh, bandoMesh, comandoMesh;
     let percentualAbertura = 0;
 
     function inicializarCatalogo() {
@@ -274,15 +269,13 @@
       const modeloKey = document.getElementById('select-modelo').value;
       const produto = catalogoProdutos[modeloKey];
 
-      // Atualiza texto do slider dependendo se é rolo ou double vision
       const txtSlider = document.getElementById('txt-label-slider');
       if (modeloKey === 'double_vision') {
-        txtSlider.innerText = "Double Vision (Recolher):";
+        txtSlider.innerText = "Double Vision (Transpasse/Recolher):";
       } else {
         txtSlider.innerText = "Rolô (Abrir/Fechar):";
       }
 
-      // Preencher Cores do Tecido
       const selectCor = document.getElementById('select-cor');
       selectCor.innerHTML = '';
       produto.cores.forEach((cor) => {
@@ -292,17 +285,36 @@
         selectCor.appendChild(opt);
       });
 
-      // Preencher Bandôs
       const selectBando = document.getElementById('select-bando');
       selectBando.innerHTML = '';
       produto.bandos.forEach((bando) => {
         const opt = document.createElement('option');
         opt.value = bando.adicional;
+        opt.dataset.tipo = bando.tipo;
         opt.innerText = `${bando.nome} ${bando.adicional > 0 ? '(+R$ ' + bando.adicional + '/m)' : ''}`;
         selectBando.appendChild(opt);
       });
 
+      aoMudarBando();
       atualizarCalculos();
+      atualizarModelo3D();
+    }
+
+    function aoMudarBando() {
+      const selectBando = document.getElementById('select-bando');
+      const selectedOption = selectBando.options[selectBando.selectedIndex];
+      const tipoBando = selectedOption ? selectedOption.dataset.tipo : 'nenhum';
+      const divCorAluminio = document.getElementById('grupo-cor-aluminio');
+
+      // Se for MDF, o bandô acompanha a cor do tecido e esconde o seletor de alumínio do bandô (mas barras e comandos continuam com cor de alumínio se houver)
+      // Se for Aluminio, mostra o seletor de cores de alumínio. Se for Nenhum, esconde ou mantém.
+      if (tipoBando === 'mdf') {
+        divCorAluminio.style.display = 'block'; // Mantém para barras/comandos, mas o bandô usará a cor do tecido
+      } else if (tipoBando === 'aluminio') {
+        divCorAluminio.style.display = 'block';
+      } else {
+        divCorAluminio.style.display = 'block';
+      }
       atualizarModelo3D();
     }
 
@@ -343,9 +355,9 @@
       bandoMesh.position.y = 0.95;
       persianaGroup.add(bandoMesh);
 
-      // Tecido
-      const tecidoGeo = new THREE.PlaneGeometry(1.5, 1.8);
-      const tecidoMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, side: THREE.DoubleSide, roughness: 0.6 });
+      // Tecido (com textura listrada simulada para Double Vision)
+      const tecidoGeo = new THREE.PlaneGeometry(1.5, 1.8, 1, 30);
+      const tecidoMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, side: THREE.DoubleSide, roughness: 0.5 });
       tecidoMesh = new THREE.Mesh(tecidoGeo, tecidoMat);
       tecidoMesh.position.y = 0;
       persianaGroup.add(tecidoMesh);
@@ -356,6 +368,13 @@
       pesoMesh = new THREE.Mesh(pesoGeo, pesoMat);
       pesoMesh.position.y = -0.9;
       persianaGroup.add(pesoMesh);
+
+      // Comando Lateral (Corrente / Mecanismo)
+      const comandoGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.2, 12);
+      const comandoMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 });
+      comandoMesh = new THREE.Mesh(comandoGeo, comandoMat);
+      comandoMesh.position.set(0.78, 0.85, 0);
+      persianaGroup.add(comandoMesh);
 
       scene.add(persianaGroup);
 
@@ -412,13 +431,14 @@
         tecidoMesh.position.y = 0.9 - (novaAlturaGeo / 2);
         pesoMesh.position.y = 0.9 - novaAlturaGeo;
 
-        // Se for Double Vision, simula visualmente o efeito de sobreposição translúcida/opaca
+        // Efeito visual realista Double Vision (faixas alternadas translúcidas)
         if (modeloKey === 'double_vision') {
-          tecidoMesh.material.opacity = 0.75 + (porcentagemFechada * 0.25);
           tecidoMesh.material.transparent = true;
+          // Simula o efeito de sobreposição das faixas criando variação de opacidade baseada no recolhimento
+          tecidoMesh.material.opacity = 0.8 + (Math.sin(percentualAbertura * 0.1) * 0.15);
         } else {
-          tecidoMesh.material.opacity = 1.0;
           tecidoMesh.material.transparent = false;
+          tecidoMesh.material.opacity = 1.0;
         }
       }
     }
@@ -436,19 +456,37 @@
       const largura = parseFloat(document.getElementById('input-largura').value) || 1.5;
       const corTecidoHex = document.getElementById('select-cor').value || '#1e293b';
       
-      const selectAcabamento = document.getElementById('select-acabamento-cor');
-      const corAcabamentoHex = selectAcabamento.value;
+      const selectBando = document.getElementById('select-bando');
+      const selectedOption = selectBando.options[selectBando.selectedIndex];
+      const tipoBando = selectedOption ? selectedOption.dataset.tipo : 'nenhum';
+
+      const corAluminioHex = document.getElementById('select-acabamento-cor').value || '#f8fafc';
 
       persianaGroup.scale.x = largura / 1.5;
       
       if (tecidoMesh) {
         tecidoMesh.material.color.set(corTecidoHex);
       }
+
+      // Se o bandô for MDF, ele assume a cor do tecido. Se for Alumínio, assume a cor escolhida de alumínio. Se for Nenhum, esconde o bandô.
       if (bandoMesh) {
-        bandoMesh.material.color.set(corAcabamentoHex);
+        if (tipoBando === 'mdf') {
+          bandoMesh.visible = true;
+          bandoMesh.material.color.set(corTecidoHex);
+        } else if (tipoBando === 'aluminio') {
+          bandoMesh.visible = true;
+          bandoMesh.material.color.set(corAluminioHex);
+        } else {
+          bandoMesh.visible = false;
+        }
       }
+
+      // Barras inferiores e comandos sempre seguem a cor do alumínio selecionada
       if (pesoMesh) {
-        pesoMesh.material.color.set(corAcabamentoHex);
+        pesoMesh.material.color.set(corAluminioHex);
+      }
+      if (comandoMesh) {
+        comandoMesh.material.color.set(corAluminioHex);
       }
 
       atualizarAberturaPersiana(percentualAbertura);
@@ -570,8 +608,8 @@
       const selectCor = document.getElementById('select-cor');
       const corNome = selectCor.options[selectCor.selectedIndex].text;
 
-      const selectAcabamento = document.getElementById('select-acabamento-cor');
-      const acabamentoNome = selectAcabamento.options[selectAcabamento.selectedIndex].text;
+      const selectAlum = document.getElementById('select-acabamento-cor');
+      const alumNome = selectAlum.options[selectAlum.selectedIndex].text;
 
       const selectBando = document.getElementById('select-bando');
       const bandoNome = selectBando.options[selectBando.selectedIndex].text;
@@ -584,8 +622,8 @@
       const mensagem = `Olá! Gostaria de solicitar um orçamento:%0A%0A` +
         `🛋️ *Modelo:* ${modeloNome}%0A` +
         `🎨 *Cor do Tecido:* ${corNome}%0A` +
-        `🛠️ *Cor dos Perfis/Barras:* ${acabamentoNome}%0A` +
         `🛡️ *Tipo de Bandô:* ${bandoNome}%0A` +
+        `🛠️ *Cor do Alumínio (Barras/Comando):* ${alumNome}%0A` +
         `📏 *Largura:* ${largura} m%0A` +
         `📐 *Altura:* ${altura} m%0A` +
         `📊 *Área Total:* ${area}%0A` +
