@@ -305,6 +305,56 @@
       atualizarModelo3D();
     }
 
+    // Função que cria dinamicamente a textura listrada para o Double Vision ou tecido normal
+    function criarTexturaTecido(corHex, isDoubleVision, deslocamentoFaixas = 0) {
+      const canvasTex = document.createElement('canvas');
+      canvasTex.width = 128;
+      canvasTex.height = 512;
+      const ctxTex = canvasTex.getContext('2d');
+
+      if (isDoubleVision) {
+        // Altura de cada listra (faixa sólida e faixa translúcida)
+        const alturaFaixa = 32;
+        const totalFaixas = canvasTex.height / alturaFaixa;
+
+        for (let i = 0; i < totalFaixas; i++) {
+          const y = (i * alturaFaixa + deslocamentoFaixas) % canvasTex.height;
+          // Alterna entre faixa colorida opaca e faixa escura/translúcida
+          if (i % 2 === 0) {
+            ctxTex.fillStyle = corHex;
+          } else {
+            // Tom mais escuro para simular a faixa vazada/translúcida
+            ctxTex.fillStyle = ajustarCorHex(corHex, -50);
+          }
+          ctxTex.fillRect(0, y >= 0 ? y : y + canvasTex.height, canvasTex.width, alturaFaixa + 1);
+        }
+      } else {
+        ctxTex.fillStyle = corHex;
+        ctxTex.fillRect(0, 0, canvasTex.width, canvasTex.height);
+      }
+
+      const texture = new THREE.CanvasTexture(canvasTex);
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.RepeatWrapping;
+      return texture;
+    }
+
+    // Utilitário para escurecer/clarear o tom da faixa do Double Vision
+    function ajustarCorHex(hex, quantidade) {
+      let color = hex.replace('#', '');
+      if (color.length === 3) {
+        color = color.split('').map(c => c + c).join('');
+      }
+      const num = parseInt(color, 16);
+      let r = (num >> 16) + quantidade;
+      let g = ((num >> 8) & 0x00ff) + quantidade;
+      let b = (num & 0x0000ff) + quantidade;
+      r = Math.min(255, Math.max(0, r));
+      g = Math.min(255, Math.max(0, g));
+      b = Math.min(255, Math.max(0, b));
+      return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+    }
+
     function init3DWebGL() {
       const container = document.getElementById('canvas-webgl-container');
       const width = container.clientWidth || 300;
@@ -330,14 +380,14 @@
 
       persianaGroup = new THREE.Group();
 
-      // 1. Bandô MDF Reto (Quadrado) - Usando MeshBasicMaterial para cor real pura
+      // 1. Bandô MDF Reto
       const bandoMdfGeo = new THREE.BoxGeometry(1.65, 0.12, 0.14);
       const bandoMdfMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
       bandoMdfMesh = new THREE.Mesh(bandoMdfGeo, bandoMdfMat);
       bandoMdfMesh.position.y = 0.95;
       persianaGroup.add(bandoMdfMesh);
 
-      // 2. Bandô Alumínio Curvo / Arredondado nas pontas - Usando MeshBasicMaterial
+      // 2. Bandô Alumínio Curvo
       const shapeAlum = new THREE.Shape();
       const ax = -0.825, ay = -0.06, w = 1.65, h = 0.12, r = 0.05;
       shapeAlum.moveTo(ax, ay + r);
@@ -358,21 +408,21 @@
       bandoAlumMesh.position.y = 0.95;
       persianaGroup.add(bandoAlumMesh);
 
-      // Tecido - Mantido MeshStandardMaterial com correção para aceitar cor limpa
+      // Tecido - Usando MeshBasicMaterial para cor pura e textura listrada dinâmica
       const tecidoGeo = new THREE.PlaneGeometry(1.5, 1.8, 1, 30);
-      const tecidoMat = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 1.0, metalness: 0.0 });
+      const tecidoMat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide });
       tecidoMesh = new THREE.Mesh(tecidoGeo, tecidoMat);
       tecidoMesh.position.y = 0;
       persianaGroup.add(tecidoMesh);
 
-      // Barra / Contrapeso Inferior - Usando MeshBasicMaterial
+      // Barra / Contrapeso Inferior
       const pesoGeo = new THREE.BoxGeometry(1.52, 0.04, 0.04);
       const pesoMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
       pesoMesh = new THREE.Mesh(pesoGeo, pesoMat);
       pesoMesh.position.y = -0.9;
       persianaGroup.add(pesoMesh);
 
-      // Comando Lateral (Corrente / Mecanismo) - Usando MeshBasicMaterial
+      // Comando Lateral
       const comandoGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.2, 12);
       const comandoMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
       comandoMesh = new THREE.Mesh(comandoGeo, comandoMat);
@@ -434,12 +484,13 @@
         tecidoMesh.position.y = 0.9 - (novaAlturaGeo / 2);
         pesoMesh.position.y = 0.9 - novaAlturaGeo;
 
+        // Se for Double Vision, atualiza o deslocamento das listras conforme o slider se move
         if (modeloKey === 'double_vision') {
-          tecidoMesh.material.transparent = true;
-          tecidoMesh.material.opacity = 0.8 + (Math.sin(percentualAbertura * 0.1) * 0.15);
-        } else {
-          tecidoMesh.material.transparent = false;
-          tecidoMesh.material.opacity = 1.0;
+          const corHex = document.getElementById('select-cor').value || '#fef3c7';
+          // O deslocamento faz as listras se moverem criando o efeito de sobreposição real
+          const deslocamento = percentualAbertura * 1.5; 
+          tecidoMesh.material.map = criarTexturaTecido(corHex, true, deslocamento);
+          tecidoMesh.material.needsUpdate = true;
         }
       }
     }
@@ -456,6 +507,7 @@
       if (!persianaGroup) return;
       const largura = parseFloat(document.getElementById('input-largura').value) || 1.5;
       const corTecidoHex = document.getElementById('select-cor').value || '#ffffff';
+      const modeloKey = document.getElementById('select-modelo').value;
       
       const selectBando = document.getElementById('select-bando');
       const selectedOption = selectBando.options[selectBando.selectedIndex];
@@ -466,21 +518,23 @@
       persianaGroup.scale.x = largura / 1.5;
       
       if (tecidoMesh) {
-        tecidoMesh.material.color.set(corTecidoHex);
+        const isDouble = (modeloKey === 'double_vision');
+        const deslocamento = percentualAbertura * 1.5;
+        tecidoMesh.material.map = criarTexturaTecido(corTecidoHex, isDouble, deslocamento);
+        tecidoMesh.material.color.set(0xffffff); // Branco puro para a textura brilhar sem filtros de cor escura
         tecidoMesh.material.needsUpdate = true;
       }
 
-      // Controle de visibilidade e cores exatas para os bandôs
       if (bandoMdfMesh && bandoAlumMesh) {
         if (tipoBando === 'mdf') {
           bandoMdfMesh.visible = true;
           bandoAlumMesh.visible = false;
-          bandoMdfMesh.material.color.set(corTecidoHex); // MDF assume cor do tecido
+          bandoMdfMesh.material.color.set(corTecidoHex);
           bandoMdfMesh.material.needsUpdate = true;
         } else if (tipoBando === 'aluminio') {
           bandoMdfMesh.visible = false;
           bandoAlumMesh.visible = true;
-          bandoAlumMesh.material.color.set(corAluminioHex); // Alumínio assume cor de acabamento selecionada
+          bandoAlumMesh.material.color.set(corAluminioHex);
           bandoAlumMesh.material.needsUpdate = true;
         } else {
           bandoMdfMesh.visible = false;
@@ -488,7 +542,6 @@
         }
       }
 
-      // Atualiza barra inferior e comando com a cor selecionada (Branco, Bege, Cinza, Marrom ou Preto puro)
       if (pesoMesh) {
         pesoMesh.material.color.set(corAluminioHex);
         pesoMesh.material.needsUpdate = true;
@@ -638,7 +691,7 @@
         `📊 *Área Total:* ${area}%0A` +
         `💰 *Valor Total:* ${preco}`;
 
-      window.open(`https://wa.me/${SEU_NUMERO_WHATSAPP}?text=${mensagem}`, '_blank');
+      window.open(`https://wa.me/${SEU_NUMERO_WHATSAPP}?text=${mensagem}`, $_blank = '_blank');
     }
 
     function gerarQRCodeProposta() {
