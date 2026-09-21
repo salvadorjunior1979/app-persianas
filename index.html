@@ -397,7 +397,7 @@
       canvasTex.height = 512;
       const ctxTex = canvasTex.getContext('2d');
 
-      const alturaFaixa = 85; // Faixas bem largas e marcantes para a Double Vision
+      const alturaFaixa = 85; 
       const totalFaixas = canvasTex.height / alturaFaixa;
 
       for (let i = 0; i <= totalFaixas; i++) {
@@ -405,7 +405,7 @@
         if (i % 2 === 0) {
           ctxTex.fillStyle = corHex;
         } else {
-          ctxTex.fillStyle = "rgba(10, 10, 10, 0.45)"; // Faixa translúcida escura de contraste real
+          ctxTex.fillStyle = "rgba(10, 10, 10, 0.45)"; 
         }
         ctxTex.fillRect(0, y, canvasTex.width, alturaFaixa);
       }
@@ -444,7 +444,7 @@
 
       const bandoMdfGeo = new THREE.BoxGeometry(1.65, 0.12, 0.14);
       bandoMdfMesh = new THREE.Mesh(bandoMdfGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
-      bandoMdfMesh.position.y = 0.94; // Alinhado perfeitamente no topo
+      bandoMdfMesh.position.y = 0.94; 
       persianaGroup.add(bandoMdfMesh);
 
       const shapeAlum = new THREE.Shape();
@@ -542,6 +542,7 @@
       const modeloKey = document.getElementById('select-modelo').value;
 
       if (modeloKey === 'double_vision') {
+        // CORREÇÃO DOUBLE VISION: Transpasse Contínuo Estático (Efeito Day-Night)
         tecidoFrontMesh.visible = true;
         tecidoBackMesh.visible = true;
         if (grupoGomos) grupoGomos.visible = false;
@@ -549,24 +550,22 @@
         if (grupoLâminasPH) grupoLâminasPH.visible = false;
         if (pesoMesh) pesoMesh.visible = true;
 
+        // Mantém a altura total intacta, alterando apenas o deslocamento vertical da camada traseira
         const alturaBase = 1.8;
-        const alturaAtual = alturaBase * (1 - progresso * 0.92);
-        
-        tecidoFrontMesh.scale.y = Math.max(0.05, 1 - progresso);
-        tecidoFrontMesh.position.y = 0.88 - (alturaAtual / 2);
+        tecidoFrontMesh.scale.y = 1.0;
+        tecidoFrontMesh.position.y = 0.88 - (alturaBase / 2);
 
-        tecidoBackMesh.scale.y = Math.max(0.05, 1 - progresso);
-        tecidoBackMesh.position.y = 0.88 - (alturaAtual / 2);
+        tecidoBackMesh.scale.y = 1.0;
+        // Deslocamento máximo de uma faixa para realizar o transpasse perfeito
+        const deslocamentoMaximoTraseira = 0.17; 
+        tecidoBackMesh.position.y = (0.88 - (alturaBase / 2)) + (progresso * deslocamentoMaximoTraseira);
 
         if (tecidoFrontMesh.material.map) {
-          tecidoFrontMesh.material.map.offset.y = progresso * 2.0;
-        }
-        if (tecidoBackMesh.material.map) {
-          tecidoBackMesh.material.map.offset.y = progresso * 2.0;
+          tecidoFrontMesh.material.map.offset.y = progresso * 1.5;
         }
 
-        pesoMesh.position.y = (0.88 - alturaAtual) - 0.02;
-        pesoMesh.visible = (progresso < 0.96);
+        pesoMesh.position.y = 0.88 - alturaBase - 0.02;
+        pesoMesh.visible = true;
 
       } else if (modeloKey === 'romana') {
         tecidoFrontMesh.visible = false;
@@ -584,7 +583,6 @@
             const gomo = gomos[i * 2];
             const vareta = gomos[i * 2 + 1];
 
-            // Posição inicial perfeitamente encostada logo abaixo do bandô (Y = 0.88)
             const yOriginal = 0.70 - (i * 0.35);
             const yTopo = 0.87 - (i * 0.035);
             
@@ -703,6 +701,7 @@
       anguloGiroPH = parseFloat(val);
       document.getElementById('txt-giro-ph-val').innerText = `${anguloGiroPH}°`;
 
+      // CORREÇÃO PH25 / PH50: Rotação uniforme em todas as lâminas simultaneamente
       if (grupoLâminasPH && grupoLâminasPH.visible) {
         const radianos = THREE.MathUtils.degToRad(anguloGiroPH);
         grupoLâminasPH.children.forEach(lam => {
@@ -752,14 +751,12 @@
           }
           const qtdGomos = 5;
           for(let i=0; i<qtdGomos; i++) {
-            // Bloco do gomo de tecido varetado
             const gomoGeo = new THREE.BoxGeometry(1.48, 0.33, 0.04);
             const gomoMat = new THREE.MeshBasicMaterial({ color: corTecidoHex });
             const gomo = new THREE.Mesh(gomoGeo, gomoMat);
             gomo.position.y = 0.70 - (i * 0.35);
             grupoGomos.add(gomo);
 
-            // Vareta horizontal em cada gomo
             const varetaGeo = new THREE.BoxGeometry(1.49, 0.015, 0.055);
             const varetaMat = new THREE.MeshBasicMaterial({ color: corAluminioHex });
             const vareta = new THREE.Mesh(varetaGeo, varetaMat);
