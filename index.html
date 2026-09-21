@@ -75,9 +75,18 @@
               </label>
             </div>
             <div class="flex items-center gap-2 w-full sm:w-auto">
-              <span class="font-semibold text-slate-600 whitespace-nowrap">Giro Frestas:</span>
+              <span class="font-semibold text-slate-600 whitespace-nowrap">Giro Lâminas:</span>
               <input type="range" id="slider-giro-vertical" min="0" max="90" value="0" oninput="atualizarGiroVertical(this.value)" class="w-28 accent-indigo-600 cursor-pointer h-2 bg-slate-200 rounded-lg" />
               <span id="txt-giro-val" class="font-bold text-indigo-600 min-w-[25px]">0°</span>
+            </div>
+          </div>
+
+          <!-- Painel específico para PH 25mm e 50mm (Giro de Lâminas Horizontais) -->
+          <div id="painel-opcoes-ph" class="hidden flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 border-t border-slate-200/60">
+            <span class="font-semibold text-slate-600">Inclinação das Lâminas (Basculante):</span>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <input type="range" id="slider-giro-ph" min="-45" max="45" value="0" oninput="atualizarGiroPH(this.value)" class="w-40 accent-indigo-600 cursor-pointer h-2 bg-slate-200 rounded-lg" />
+              <span id="txt-giro-ph-val" class="font-bold text-indigo-600 min-w-[30px]">0°</span>
             </div>
           </div>
 
@@ -121,7 +130,7 @@
           </select>
         </div>
 
-        <!-- Cor do Tecido -->
+        <!-- Cor do Tecido / Lâminas -->
         <div>
           <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cor do Tecido / Lâminas</label>
           <select id="select-cor" onchange="atualizarCalculos(); atualizarModelo3D();" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium">
@@ -249,7 +258,7 @@
         ]
       },
       "romana": {
-        nome: "Persiana Romana (Gomos)",
+        nome: "Persiana Romana (Varetada)",
         precoMetro: 175.00,
         cores: [
           { nome: "Tecido Linho Branco", hex: "#ffffff" },
@@ -273,6 +282,32 @@
         bandos: [
           { nome: "Trilho Superior Alumínio Padrão", adicional: 0, tipo: "aluminio" }
         ]
+      },
+      "ph_25": {
+        nome: "Persiana Horizontal Alumínio 25mm",
+        precoMetro: 130.00,
+        cores: [
+          { nome: "Alumínio Branco", hex: "#ffffff" },
+          { nome: "Alumínio Prata / Cinza", hex: "#cbd5e1" },
+          { nome: "Alumínio Preto", hex: "#1e293b" },
+          { nome: "Alumínio Champagne", hex: "#e2e8f0" }
+        ],
+        bandos: [
+          { nome: "Calha Superior Alumínio Padrão", adicional: 0, tipo: "aluminio" }
+        ]
+      },
+      "ph_50": {
+        nome: "Persiana Horizontal 50mm (Madeira/Alumínio)",
+        precoMetro: 240.00,
+        cores: [
+          { nome: "Madeira Natural Cedro", hex: "#a16207" },
+          { nome: "Madeira Branco Neve", hex: "#f8fafc" },
+          { nome: "Madeira Tabaco Escuro", hex: "#3f2c22" },
+          { nome: "Alumínio 50mm Cinza", hex: "#64748b" }
+        ],
+        bandos: [
+          { nome: "Bandô Decorativo de Madeira", adicional: 0, tipo: "mdf" }
+        ]
       }
     };
 
@@ -285,8 +320,10 @@
     let tecidoFrontMesh, tecidoBackMesh, pesoMesh, bandoMdfMesh, bandoAlumMesh, comandoMesh;
     let grupoGomos = null;
     let grupoLâminasVerticais = null;
+    let grupoLâminasPH = null;
     let percentualAbertura = 0;
     let anguloGiroVertical = 0;
+    let anguloGiroPH = 0;
 
     function inicializarCatalogo() {
       const selectModelo = document.getElementById('select-modelo');
@@ -307,19 +344,23 @@
 
       const txtSlider = document.getElementById('txt-label-slider');
       const painelVert = document.getElementById('painel-opcoes-vertical');
+      const painelPh = document.getElementById('painel-opcoes-ph');
       
+      painelVert.classList.add('hidden');
+      painelPh.classList.add('hidden');
+
       if (modeloKey === 'double_vision') {
         txtSlider.innerText = "Double Vision (Transpasse Contínuo):";
-        painelVert.classList.add('hidden');
       } else if (modeloKey === 'romana') {
-        txtSlider.innerText = "Romana (Recolher Gomos):";
-        painelVert.classList.add('hidden');
+        txtSlider.innerText = "Romana Varetada (Recolher Gomos):";
       } else if (modeloKey === 'vertical') {
         txtSlider.innerText = "Vertical (Recolhimento / Abertura):";
         painelVert.classList.remove('hidden');
+      } else if (modeloKey === 'ph_25' || modeloKey === 'ph_50') {
+        txtSlider.innerText = "Horizontal (Subir / Descer):";
+        painelPh.classList.remove('hidden');
       } else {
         txtSlider.innerText = "Rolô (Abrir/Fechar):";
-        painelVert.classList.add('hidden');
       }
 
       const selectCor = document.getElementById('select-cor');
@@ -356,15 +397,15 @@
       canvasTex.height = 512;
       const ctxTex = canvasTex.getContext('2d');
 
-      const alturaFaixa = 32;
+      const alturaFaixa = 85; // Faixas bem largas e marcantes para a Double Vision
       const totalFaixas = canvasTex.height / alturaFaixa;
 
-      for (let i = 0; i < totalFaixas; i++) {
+      for (let i = 0; i <= totalFaixas; i++) {
         const y = i * alturaFaixa;
         if (i % 2 === 0) {
           ctxTex.fillStyle = corHex;
         } else {
-          ctxTex.fillStyle = "rgba(0,0,0,0.12)";
+          ctxTex.fillStyle = "rgba(10, 10, 10, 0.45)"; // Faixa translúcida escura de contraste real
         }
         ctxTex.fillRect(0, y, canvasTex.width, alturaFaixa);
       }
@@ -372,7 +413,7 @@
       const texture = new THREE.CanvasTexture(canvasTex);
       texture.wrapS = THREE.RepeatWrapping;
       texture.wrapT = THREE.RepeatWrapping;
-      texture.repeat.set(1, 8);
+      texture.repeat.set(1, 3);
       return texture;
     }
 
@@ -403,7 +444,7 @@
 
       const bandoMdfGeo = new THREE.BoxGeometry(1.65, 0.12, 0.14);
       bandoMdfMesh = new THREE.Mesh(bandoMdfGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
-      bandoMdfMesh.position.y = 0.95;
+      bandoMdfMesh.position.y = 0.94; // Alinhado perfeitamente no topo
       persianaGroup.add(bandoMdfMesh);
 
       const shapeAlum = new THREE.Shape();
@@ -421,12 +462,11 @@
       const bandoAlumGeo = new THREE.ExtrudeGeometry(shapeAlum, { depth: 0.14, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: 0.01, bevelThickness: 0.01 });
       bandoAlumGeo.center();
       bandoAlumMesh = new THREE.Mesh(bandoAlumGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
-      bandoAlumMesh.position.y = 0.95;
+      bandoAlumMesh.position.y = 0.94;
       persianaGroup.add(bandoAlumMesh);
 
       const tecidoGeo = new THREE.PlaneGeometry(1.5, 1.8, 1, 30);
       tecidoFrontMesh = new THREE.Mesh(tecidoGeo, new THREE.MeshBasicMaterial({ side: THREE.DoubleSide }));
-      tecidoFrontMesh.position.y = 0;
       persianaGroup.add(tecidoFrontMesh);
 
       const tecidoBackGeo = new THREE.PlaneGeometry(1.5, 1.8, 1, 30);
@@ -436,7 +476,6 @@
 
       const pesoGeo = new THREE.BoxGeometry(1.52, 0.04, 0.04);
       pesoMesh = new THREE.Mesh(pesoGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
-      pesoMesh.position.y = -0.9;
       persianaGroup.add(pesoMesh);
 
       const comandoGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.2, 12);
@@ -449,6 +488,9 @@
 
       grupoLâminasVerticais = new THREE.Group();
       persianaGroup.add(grupoLâminasVerticais);
+
+      grupoLâminasPH = new THREE.Group();
+      persianaGroup.add(grupoLâminasPH);
 
       scene.add(persianaGroup);
 
@@ -504,50 +546,92 @@
         tecidoBackMesh.visible = true;
         if (grupoGomos) grupoGomos.visible = false;
         if (grupoLâminasVerticais) grupoLâminasVerticais.visible = false;
+        if (grupoLâminasPH) grupoLâminasPH.visible = false;
         if (pesoMesh) pesoMesh.visible = true;
 
         const alturaBase = 1.8;
         const alturaAtual = alturaBase * (1 - progresso * 0.92);
         
         tecidoFrontMesh.scale.y = Math.max(0.05, 1 - progresso);
-        tecidoFrontMesh.position.y = 0.9 - (alturaAtual / 2);
+        tecidoFrontMesh.position.y = 0.88 - (alturaAtual / 2);
 
         tecidoBackMesh.scale.y = Math.max(0.05, 1 - progresso);
-        tecidoBackMesh.position.y = 0.9 - (alturaAtual / 2);
+        tecidoBackMesh.position.y = 0.88 - (alturaAtual / 2);
 
         if (tecidoFrontMesh.material.map) {
-          tecidoFrontMesh.material.map.offset.y = progresso * 2.5;
+          tecidoFrontMesh.material.map.offset.y = progresso * 2.0;
         }
         if (tecidoBackMesh.material.map) {
-          tecidoBackMesh.material.map.offset.y = progresso * 2.5;
+          tecidoBackMesh.material.map.offset.y = progresso * 2.0;
         }
 
-        pesoMesh.position.y = (0.9 - alturaAtual) - 0.02;
+        pesoMesh.position.y = (0.88 - alturaAtual) - 0.02;
         pesoMesh.visible = (progresso < 0.96);
 
       } else if (modeloKey === 'romana') {
         tecidoFrontMesh.visible = false;
         tecidoBackMesh.visible = false;
         if (grupoLâminasVerticais) grupoLâminasVerticais.visible = false;
+        if (grupoLâminasPH) grupoLâminasPH.visible = false;
+        if (pesoMesh) pesoMesh.visible = false;
+
         if (grupoGomos) {
           grupoGomos.visible = true;
           const gomos = grupoGomos.children;
+          const totalPares = gomos.length / 2;
           
-          gomos.forEach((gomo, index) => {
-            const yOriginal = 0.6 - (index * 0.35);
-            const yTopo = 0.78 - (index * 0.04);
+          for(let i=0; i<totalPares; i++) {
+            const gomo = gomos[i * 2];
+            const vareta = gomos[i * 2 + 1];
+
+            // Posição inicial perfeitamente encostada logo abaixo do bandô (Y = 0.88)
+            const yOriginal = 0.70 - (i * 0.35);
+            const yTopo = 0.87 - (i * 0.035);
             
-            gomo.position.y = yOriginal + (yTopo - yOriginal) * progresso;
-            gomo.scale.y = Math.max(0.15, 1 - (progresso * 0.75));
+            const posY = yOriginal + (yTopo - yOriginal) * progresso;
+            const escalaY = Math.max(0.08, 1 - (progresso * 0.80));
+
+            gomo.position.y = posY;
+            gomo.scale.y = escalaY;
             gomo.visible = true;
+
+            if (vareta) {
+              vareta.position.y = posY - (0.33 * escalaY / 2);
+              vareta.scale.x = Math.max(0.2, 1 - (progresso * 0.5));
+              vareta.visible = true;
+            }
+          }
+        }
+
+      } else if (modeloKey === 'ph_25' || modeloKey === 'ph_50') {
+        tecidoFrontMesh.visible = false;
+        tecidoBackMesh.visible = false;
+        if (grupoGomos) grupoGomos.visible = false;
+        if (grupoLâminasVerticais) grupoLâminasVerticais.visible = false;
+        if (pesoMesh) pesoMesh.visible = false;
+
+        if (grupoLâminasPH) {
+          grupoLâminasPH.visible = true;
+          const totalLaminas = grupoLâminasPH.children.length;
+          const alturaTotal = 1.8;
+          const alturaVisivel = alturaTotal * (1 - progresso);
+          
+          grupoLâminasPH.children.forEach((lam, index) => {
+            const proporcao = index / totalLaminas;
+            if (proporcao > (1 - progresso)) {
+              lam.visible = false;
+            } else {
+              lam.visible = true;
+              lam.position.y = 0.87 - (index * (alturaVisivel / totalLaminas));
+            }
           });
         }
-        if (pesoMesh) pesoMesh.visible = false;
 
       } else if (modeloKey === 'vertical') {
         tecidoFrontMesh.visible = false;
         tecidoBackMesh.visible = false;
         if (grupoGomos) grupoGomos.visible = false;
+        if (grupoLâminasPH) grupoLâminasPH.visible = false;
         if (pesoMesh) pesoMesh.visible = false;
         if (grupoLâminasVerticais) {
           grupoLâminasVerticais.visible = true;
@@ -590,6 +674,7 @@
         tecidoBackMesh.visible = false;
         if (grupoGomos) grupoGomos.visible = false;
         if (grupoLâminasVerticais) grupoLâminasVerticais.visible = false;
+        if (grupoLâminasPH) grupoLâminasPH.visible = false;
         if (pesoMesh) pesoMesh.visible = true;
 
         const alturaBase = 1.8;
@@ -597,8 +682,8 @@
         const novaAlturaGeo = Math.max(0.05, alturaBase * porcentagemFechada);
 
         tecidoFrontMesh.scale.y = Math.max(0.02, porcentagemFechada);
-        tecidoFrontMesh.position.y = 0.9 - (novaAlturaGeo / 2);
-        if (pesoMesh) pesoMesh.position.y = 0.9 - novaAlturaGeo;
+        tecidoFrontMesh.position.y = 0.88 - (novaAlturaGeo / 2);
+        if (pesoMesh) pesoMesh.position.y = 0.88 - novaAlturaGeo;
       }
     }
 
@@ -610,6 +695,18 @@
         const radianos = THREE.MathUtils.degToRad(anguloGiroVertical);
         grupoLâminasVerticais.children.forEach(lam => {
           lam.rotation.y = radianos;
+        });
+      }
+    }
+
+    function atualizarGiroPH(val) {
+      anguloGiroPH = parseFloat(val);
+      document.getElementById('txt-giro-ph-val').innerText = `${anguloGiroPH}°`;
+
+      if (grupoLâminasPH && grupoLâminasPH.visible) {
+        const radianos = THREE.MathUtils.degToRad(anguloGiroPH);
+        grupoLâminasPH.children.forEach(lam => {
+          lam.rotation.x = radianos;
         });
       }
     }
@@ -653,13 +750,21 @@
           while(grupoGomos.children.length > 0){ 
             grupoGomos.remove(grupoGomos.children[0]); 
           }
-          const qtdGomos = 4;
+          const qtdGomos = 5;
           for(let i=0; i<qtdGomos; i++) {
-            const gomoGeo = new THREE.BoxGeometry(1.48, 0.35, 0.04);
+            // Bloco do gomo de tecido varetado
+            const gomoGeo = new THREE.BoxGeometry(1.48, 0.33, 0.04);
             const gomoMat = new THREE.MeshBasicMaterial({ color: corTecidoHex });
             const gomo = new THREE.Mesh(gomoGeo, gomoMat);
-            gomo.position.y = 0.6 - (i * 0.35);
+            gomo.position.y = 0.70 - (i * 0.35);
             grupoGomos.add(gomo);
+
+            // Vareta horizontal em cada gomo
+            const varetaGeo = new THREE.BoxGeometry(1.49, 0.015, 0.055);
+            const varetaMat = new THREE.MeshBasicMaterial({ color: corAluminioHex });
+            const vareta = new THREE.Mesh(varetaGeo, varetaMat);
+            vareta.position.y = (0.70 - (i * 0.35)) - 0.165;
+            grupoGomos.add(vareta);
           }
         }
       } else if (modeloKey === 'vertical') {
@@ -676,6 +781,22 @@
             lamina.position.x = -0.74 + (i * larguraLamina) + (larguraLamina / 2);
             lamina.position.y = 0;
             grupoLâminasVerticais.add(lamina);
+          }
+        }
+      } else if (modeloKey === 'ph_25' || modeloKey === 'ph_50') {
+        if (grupoLâminasPH) {
+          while(grupoLâminasPH.children.length > 0){ 
+            grupoLâminasPH.remove(grupoLâminasPH.children[0]); 
+          }
+          const alturaLaminas = modeloKey === 'ph_25' ? 0.025 : 0.05;
+          const qtd = Math.round(1.7 / alturaLaminas);
+          
+          for(let i=0; i<qtd; i++) {
+            const lamGeo = new THREE.BoxGeometry(1.48, alturaLaminas * 0.92, 0.035);
+            const lamMat = new THREE.MeshBasicMaterial({ color: corTecidoHex });
+            const lamina = new THREE.Mesh(lamGeo, lamMat);
+            lamina.position.y = 0.87 - (i * alturaLaminas);
+            grupoLâminasPH.add(lamina);
           }
         }
       } else {
@@ -714,6 +835,7 @@
 
       atualizarAberturaPersiana(percentualAbertura);
       atualizarGiroVertical(anguloGiroVertical);
+      atualizarGiroPH(anguloGiroPH);
       desenharCanvas();
     }
 
