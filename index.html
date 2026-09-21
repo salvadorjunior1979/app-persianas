@@ -53,7 +53,7 @@
         <button id="btn-mode-3d-ar" onclick="alterarModo('3d-ar')" class="px-4 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">Projeção na Parede (RA)</button>
       </div>
 
-      <!-- Modo 1: Visualizador 3D WebGL Interativo em Tempo Real (Funciona em 100% dos Celulares) -->
+      <!-- Modo 1: Visualizador 3D WebGL Interativo em Tempo Real -->
       <div id="container-3d-webgl" class="relative w-full h-[450px] md:h-[550px] bg-slate-900 rounded-2xl overflow-hidden shadow-inner flex flex-col items-center justify-center">
         <div id="canvas-webgl-container" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
         <div class="absolute bottom-4 left-4 right-4 glass-panel p-3 rounded-xl shadow-md text-xs font-medium text-slate-700 flex justify-between items-center">
@@ -62,7 +62,7 @@
         </div>
       </div>
 
-      <!-- Modo 2: Container Simulador e Medição Touch 2D (Com botões no rodapé) -->
+      <!-- Modo 2: Container Simulador e Medição Touch 2D -->
       <div id="container-2d" class="hidden flex flex-col gap-3">
         <div class="relative w-full h-[450px] md:h-[550px] bg-slate-900 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
           <canvas id="canvas-2d" class="w-full h-full touch-none cursor-crosshair"></canvas>
@@ -198,7 +198,6 @@
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
 
-      // Iluminação
       const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
       scene.add(ambientLight);
 
@@ -207,24 +206,20 @@
       dirLight.castShadow = true;
       scene.add(dirLight);
 
-      // Criar Persiana 3D Dinâmica
       persianaGroup = new THREE.Group();
 
-      // Suporte Superior (Trilho)
       const trilhoGeo = new THREE.BoxGeometry(1.6, 0.08, 0.1);
       const trilhoMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
       const trilhoMesh = new THREE.Mesh(trilhoGeo, trilhoMat);
       trilhoMesh.position.y = 0.9;
       persianaGroup.add(trilhoMesh);
 
-      // Tecido da Persiana
       const tecidoGeo = new THREE.PlaneGeometry(1.5, 1.8);
       const tecidoMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, side: THREE.DoubleSide, roughness: 0.6 });
       tecidoMesh = new THREE.Mesh(tecidoGeo, tecidoMat);
       tecidoMesh.position.y = 0;
       persianaGroup.add(tecidoMesh);
 
-      // Barra Inferior (Peso)
       const pesoGeo = new THREE.BoxGeometry(1.52, 0.04, 0.04);
       const pesoMesh = new THREE.Mesh(pesoGeo, trilhoMat);
       pesoMesh.position.y = -0.9;
@@ -380,16 +375,33 @@
       }
     }
 
+    // Cálculo proporcional de largura e altura respeitando a física da fotografia
     function calcularEAlinhharMedidas() {
       if (pontos.length < 4) return;
-      const largPx = Math.hypot(pontos[1].x - pontos[0].x, pontos[1].y - pontos[0].y);
-      const altPx = Math.hypot(pontos[3].x - pontos[0].x, pontos[3].y - pontos[0].y);
-      
-      const largMetros = (largPx / 150).toFixed(2);
-      const altMetros = (altPx / 150).toFixed(2);
 
-      document.getElementById('input-largura').value = Math.max(0.5, largMetros);
-      document.getElementById('input-altura').value = Math.max(0.5, altMetros);
+      // Distância média entre pontos superiores/inferiores (Largura)
+      const largTopo = Math.hypot(pontos[1].x - pontos[0].x, pontos[1].y - pontos[0].y);
+      const largBase = Math.hypot(pontos[2].x - pontos[3].x, pontos[2].y - pontos[3].y);
+      const largPx = (largTopo + largBase) / 2;
+
+      // Distância média entre pontos esquerdos/direitos (Altura)
+      const altEsq = Math.hypot(pontos[3].x - pontos[0].x, pontos[3].y - pontos[0].y);
+      const altDir = Math.hypot(pontos[2].x - pontos[1].x, pontos[2].y - pontos[1].y);
+      const altPx = (altEsq + altDir) / 2;
+
+      // Razão de aspecto real capturada pela foto
+      const razaoAspecto = altPx / (largPx || 1);
+
+      // Assumindo uma largura média de janela padrão de 1.50m caso seja a referência inicial
+      let largEstimada = 1.50;
+      let altEstimada = (largEstimada * razaoAspecto).toFixed(2);
+
+      // Se a altura der um valor fora do alcance mínimo, ajusta proporcionalmente
+      if (altEstimada < 0.5) altEstimada = 1.20;
+
+      document.getElementById('input-largura').value = largEstimada.toFixed(2);
+      document.getElementById('input-altura').value = altEstimada;
+
       atualizarCalculos();
       atualizarModelo3D();
     }
