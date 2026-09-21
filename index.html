@@ -51,13 +51,13 @@
 
       <!-- Modo 1: Projeção 3D com Câmera ao Fundo -->
       <div id="container-3d-webgl" class="flex flex-col gap-4">
-        <!-- Caixa de visualização 100% limpa (sem botões ou elementos por cima) -->
+        <!-- Caixa de visualização 100% limpa -->
         <div class="relative w-full h-[380px] md:h-[460px] bg-slate-900 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
           <video id="camera-video" autoplay playsinline class="absolute inset-0 w-full h-full object-cover hidden"></video>
           <div id="canvas-webgl-container" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing z-10"></div>
         </div>
 
-        <!-- Painel de controlos externo (idêntico ao layout de fotos) -->
+        <!-- Painel de controlos externo -->
         <div class="glass-panel p-4 rounded-2xl shadow-sm flex flex-col gap-3 text-xs font-medium text-slate-700">
           <div class="flex items-center gap-3 w-full">
             <span class="whitespace-nowrap font-semibold">Rolô (Abrir/Fechar):</span>
@@ -93,9 +93,33 @@
 
     <!-- Painel de Configurações & Orçamento Exato -->
     <div class="glass-panel p-6 rounded-2xl shadow-sm flex flex-col justify-between gap-6">
-      <div class="space-y-6">
-        <h2 class="text-lg font-bold text-slate-900 border-b border-slate-200/80 pb-3">Inserir Medidas Reais (Trena)</h2>
+      <div class="space-y-5">
+        <h2 class="text-lg font-bold text-slate-900 border-b border-slate-200/80 pb-3">Configuração & Medidas</h2>
         
+        <!-- Modelo de Persiana -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Modelo de Persiana</label>
+          <select id="select-modelo" onchange="aoMudarModelo()" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium">
+            <!-- Preenchido via JavaScript -->
+          </select>
+        </div>
+
+        <!-- Cor do Tecido -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cor do Tecido</label>
+          <select id="select-cor" onchange="atualizarCalculos(); atualizarModelo3D();" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium">
+            <!-- Preenchido via JavaScript -->
+          </select>
+        </div>
+
+        <!-- Tipo de Bandô -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Tipo de Bandô / Acabamento</label>
+          <select id="select-bando" onchange="atualizarCalculos();" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium">
+            <!-- Preenchido via JavaScript -->
+          </select>
+        </div>
+
         <!-- Medidas Manuais -->
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -108,25 +132,18 @@
           </div>
         </div>
 
-        <!-- Tipo de Tecido -->
-        <div>
-          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Modelo / Tecido</label>
-          <select id="select-tecido" onchange="atualizarCalculos(); atualizarModelo3D();" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium">
-            <option value="120" data-color="#1e293b">Rolô Blackout (R$ 120/m²)</option>
-            <option value="95" data-color="#f8fafc">Rolô Tela Solar 3% (R$ 95/m²)</option>
-            <option value="150" data-color="#94a3b8">Persiana Horizontal Alumínio (R$ 150/m²)</option>
-            <option value="210" data-color="#d97706">Double Vision / Romana (R$ 210/m²)</option>
-          </select>
-        </div>
-
         <!-- Resumo do Cálculo -->
         <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2">
-          <div class="flex justify-between text-sm text-slate-600">
+          <div class="flex justify-between text-xs text-slate-600">
             <span>Área Total:</span>
             <span id="txt-area" class="font-semibold text-slate-800">2.70 m²</span>
           </div>
+          <div class="flex justify-between text-xs text-slate-600">
+            <span>Preço por m² + Acabamento:</span>
+            <span id="txt-unitario" class="font-semibold text-slate-800">R$ 120,00</span>
+          </div>
           <div class="flex justify-between text-base font-bold text-slate-900 border-t border-slate-200/60 pt-2">
-            <span>Valor do Orçamento:</span>
+            <span>Valor Total:</span>
             <span id="txt-preco" class="text-indigo-600">R$ 324,00</span>
           </div>
         </div>
@@ -159,13 +176,117 @@
 
   <script>
     const SEU_NUMERO_WHATSAPP = "5522999633486";
+    
+    // BANCO DE DADOS DE MODELOS, CORES E BANDÔS
+    const catalogoProdutos = {
+      "blackout": {
+        nome: "Rolô Blackout",
+        precoMetro: 120.00,
+        cores: [
+          { nome: "Cinza Escuro Antracite", hex: "#1e293b" },
+          { nome: "Branco Neve", hex: "#f8fafc" },
+          { nome: "Bege Areia", hex: "#d4d4d8" },
+          { nome: "Marrom Café", hex: "#451a03" }
+        ],
+        bandos: [
+          { nome: "Sem Bandô", adicional: 0 },
+          { nome: "Bandô Alumínio Branco", adicional: 25 },
+          { nome: "Bandô Alumínio Escovado", adicional: 35 },
+          { nome: "Bandô MDF Reto Amadeirado", adicional: 50 }
+        ]
+      },
+      "tela_solar": {
+        nome: "Rolô Tela Solar 3%",
+        precoMetro: 95.00,
+        cores: [
+          { nome: "Branco / Cinza Claro", hex: "#e2e8f0" },
+          { nome: "Cinza Médio", hex: "#64748b" },
+          { nome: "Preto / Antracite", hex: "#0f172a" }
+        ],
+        bandos: [
+          { nome: "Sem Bandô", adicional: 0 },
+          { nome: "Bandô Alumínio Branco", adicional: 25 },
+          { nome: "Bandô Alumínio Preto", adicional: 30 }
+        ]
+      },
+      "double_vision": {
+        nome: "Double Vision (Dupla Visão)",
+        precoMetro: 210.00,
+        cores: [
+          { nome: "Off-White / Creme", hex: "#fef3c7" },
+          { nome: "Cinza Natural", hex: "#94a3b8" },
+          { nome: "Caramelo / Linho", hex: "#d97706" }
+        ],
+        bandos: [
+          { nome: "Bandô Revestido Premium (Padrão)", adicional: 0 },
+          { nome: "Bandô Alumínio Escovado", adicional: 40 },
+          { nome: "Bandô MDF Reto Carvalho", adicional: 60 }
+        ]
+      },
+      "romana": {
+        nome: "Persiana Romana",
+        precoMetro: 175.00,
+        cores: [
+          { nome: "Tecido Linho Branco", hex: "#f1f5f9" },
+          { nome: "Tecido Linho Cinza", hex: "#cbd5e1" },
+          { nome: "Tecido Rústico Bege", hex: "#e7e5e4" }
+        ],
+        bandos: [
+          { nome: "Sem Bandô", adicional: 0 },
+          { nome: "Bandô Revestido no Tecido", adicional: 40 },
+          { nome: "Bandô MDF Reto", adicional: 55 }
+        ]
+      }
+    };
+
     let imagemCarregada = null;
     let streamCamera = null;
     const canvas = document.getElementById('canvas-2d');
     const ctx = canvas.getContext('2d');
 
-    let scene, camera, renderer, controls, persianaGroup, tecidoMesh, pesoMesh;
+    let scene, camera, renderer, controls, persianaGroup, tecidoMesh, pesoMesh, bandoMesh;
     let percentualAbertura = 0;
+
+    function inicializarCatalogo() {
+      const selectModelo = document.getElementById('select-modelo');
+      selectModelo.innerHTML = '';
+      
+      for (const key in catalogoProdutos) {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.innerText = catalogoProdutos[key].nome;
+        selectModelo.appendChild(opt);
+      }
+      aoMudarModelo();
+    }
+
+    function aoMudarModelo() {
+      const modeloKey = document.getElementById('select-modelo').value;
+      const produto = catalogoProdutos[modeloKey];
+
+      // Preencher Cores
+      const selectCor = document.getElementById('select-cor');
+      selectCor.innerHTML = '';
+      produto.cores.forEach((cor, idx) => {
+        const opt = document.createElement('option');
+        opt.value = cor.hex;
+        opt.innerText = cor.nome;
+        selectCor.appendChild(opt);
+      });
+
+      // Preencher Bandôs
+      const selectBando = document.getElementById('select-bando');
+      selectBando.innerHTML = '';
+      produto.bandos.forEach((bando, idx) => {
+        const opt = document.createElement('option');
+        opt.value = bando.adicional;
+        opt.innerText = `${bando.nome} ${bando.adicional > 0 ? '(+R$ ' + bando.adicional + '/m)' : ''}`;
+        selectBando.appendChild(opt);
+      });
+
+      atualizarCalculos();
+      atualizarModelo3D();
+    }
 
     function init3DWebGL() {
       const container = document.getElementById('canvas-webgl-container');
@@ -197,20 +318,24 @@
 
       persianaGroup = new THREE.Group();
 
-      const trilhoGeo = new THREE.BoxGeometry(1.6, 0.08, 0.1);
-      const trilhoMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
-      const trilhoMesh = new THREE.Mesh(trilhoGeo, trilhoMat);
-      trilhoMesh.position.y = 0.9;
-      persianaGroup.add(trilhoMesh);
+      // Bandô 3D Superior
+      const bandoGeo = new THREE.BoxGeometry(1.65, 0.12, 0.14);
+      const bandoMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.3 });
+      bandoMesh = new THREE.Mesh(bandoGeo, bandoMat);
+      bandoMesh.position.y = 0.95;
+      persianaGroup.add(bandoMesh);
 
+      // Tecido
       const tecidoGeo = new THREE.PlaneGeometry(1.5, 1.8);
       const tecidoMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, side: THREE.DoubleSide, roughness: 0.6 });
       tecidoMesh = new THREE.Mesh(tecidoGeo, tecidoMat);
       tecidoMesh.position.y = 0;
       persianaGroup.add(tecidoMesh);
 
+      // Barra Inferior / Peso
       const pesoGeo = new THREE.BoxGeometry(1.52, 0.04, 0.04);
-      pesoMesh = new THREE.Mesh(pesoGeo, trilhoMat);
+      const pesoMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
+      pesoMesh = new THREE.Mesh(pesoGeo, pesoMat);
       pesoMesh.position.y = -0.9;
       persianaGroup.add(pesoMesh);
 
@@ -281,10 +406,8 @@
     function atualizarModelo3D() {
       if (!persianaGroup) return;
       const largura = parseFloat(document.getElementById('input-largura').value) || 1.5;
-      const altura = parseFloat(document.getElementById('input-altura').value) || 1.8;
       
-      const select = document.getElementById('select-tecido');
-      const corHex = select.options[select.selectedIndex].getAttribute('data-color') || '#1e293b';
+      const corHex = document.getElementById('select-cor').value || '#1e293b';
 
       persianaGroup.scale.x = largura / 1.5;
       if (tecidoMesh) {
@@ -324,7 +447,6 @@
     }
 
     function redimensionarCanvas() {
-      const container = document.getElementById('container-2d');
       canvas.width = canvas.parentElement.clientWidth;
       canvas.height = canvas.parentElement.clientHeight;
       desenharCanvas();
@@ -387,29 +509,45 @@
     function atualizarCalculos() {
       const largura = parseFloat(document.getElementById('input-largura').value) || 0;
       const altura = parseFloat(document.getElementById('input-altura').value) || 0;
-      const precoMetro = parseFloat(document.getElementById('select-tecido').value) || 0;
-
+      
+      const modeloKey = document.getElementById('select-modelo').value;
+      const produto = catalogoProdutos[modeloKey];
+      
+      const precoBaseMetro = produto ? produto.precoMetro : 100;
+      const adicionalBando = parseFloat(document.getElementById('select-bando').value) || 0;
+      
+      const custoMetroFinal = precoBaseMetro + adicionalBando;
       const area = largura * altura;
-      const total = area * precoMetro;
+      const total = area * custoMetroFinal;
 
       document.getElementById('txt-area').innerText = `${area.toFixed(2)} m²`;
+      document.getElementById('txt-unitario').innerText = `R$ ${custoMetroFinal.toFixed(2)} /m²`;
       document.getElementById('txt-preco').innerText = `R$ ${total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
     }
 
     function enviarOrcamentoWhatsApp() {
+      const selectModelo = document.getElementById('select-modelo');
+      const modeloNome = selectModelo.options[selectModelo.selectedIndex].text;
+      
+      const selectCor = document.getElementById('select-cor');
+      const corNome = selectCor.options[selectCor.selectedIndex].text;
+
+      const selectBando = document.getElementById('select-bando');
+      const bandoNome = selectBando.options[selectBando.selectedIndex].text;
+
       const largura = document.getElementById('input-largura').value;
       const altura = document.getElementById('input-altura').value;
-      const selectTecido = document.getElementById('select-tecido');
-      const tecidoNome = selectTecido.options[selectTecido.selectedIndex].text;
       const area = document.getElementById('txt-area').innerText;
       const preco = document.getElementById('txt-preco').innerText;
 
-      const mensagem = `Olá! Gostaria de solicitar um orçamento baseado na simulação do site:%0A%0A` +
-        `📏 *Largura (Trena):* ${largura} m%0A` +
-        `📐 *Altura (Trena):* ${altura} m%0A` +
-        `🎨 *Modelo/Tecido:* ${tecidoNome}%0A` +
+      const mensagem = `Olá! Gostaria de solicitar um orçamento:%0A%0A` +
+        `🛋️ *Modelo:* ${modeloNome}%0A` +
+        `🎨 *Cor do Tecido:* ${corNome}%0A` +
+        `🛡️ *Acabamento:* ${bandoNome}%0A` +
+        `📏 *Largura:* ${largura} m%0A` +
+        `📐 *Altura:* ${altura} m%0A` +
         `📊 *Área Total:* ${area}%0A` +
-        `💰 *Valor Estimado:* ${preco}`;
+        `💰 *Valor Total:* ${preco}`;
 
       window.open(`https://wa.me/${SEU_NUMERO_WHATSAPP}?text=${mensagem}`, '_blank');
     }
@@ -436,8 +574,8 @@
     }
 
     window.addEventListener('DOMContentLoaded', () => {
+      inicializarCatalogo();
       init3DWebGL();
-      atualizarCalculos();
     });
 
     window.addEventListener('resize', () => {
