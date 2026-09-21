@@ -49,23 +49,24 @@
         <button id="btn-mode-2d" onclick="alterarModo('2d')" class="px-4 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">Simular sobre Foto</button>
       </div>
 
-      <!-- Modo 1: Projeção 3D com Câmera ao Fundo (Com painel idêntico ao de fotos abaixo) -->
+      <!-- Modo 1: Projeção 3D com Câmera ao Fundo -->
       <div id="container-3d-webgl" class="flex flex-col gap-3">
+        <!-- Caixa de visualização 100% limpa -->
         <div class="relative w-full h-[380px] md:h-[460px] bg-slate-900 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center">
           <video id="camera-video" autoplay playsinline class="absolute inset-0 w-full h-full object-cover hidden"></video>
           <div id="canvas-webgl-container" class="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing z-10"></div>
         </div>
 
-        <!-- Painel de controlos exatamente no formato limpo de bloco inferior -->
-        <div class="glass-panel p-4 rounded-xl shadow-sm flex flex-col gap-3 text-xs font-medium text-slate-700">
+        <!-- Painel de controlos isolado e abaixo da caixa -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-3 text-xs font-medium text-slate-700">
           <div class="flex items-center gap-3 w-full">
             <span class="whitespace-nowrap font-semibold">Rolô (Abrir/Fechar):</span>
             <input type="range" id="slider-abertura" min="0" max="100" value="0" oninput="atualizarAberturaPersiana(this.value)" class="w-full accent-indigo-600 cursor-pointer h-2 bg-slate-200 rounded-lg" />
             <span id="txt-abertura-val" class="font-bold text-indigo-600 min-w-[35px] text-right">100%</span>
           </div>
-          <div class="flex gap-2 justify-end pt-2 border-t border-slate-200/60">
+          <div class="flex gap-2 justify-end pt-2 border-t border-slate-100">
             <button id="btn-toggle-camera" onclick="alternarCamera()" class="flex-1 bg-indigo-600 text-white px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition font-semibold shadow-sm">Ligar Câmera</button>
-            <button onclick="resetarCamera3D()" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl hover:bg-slate-300 transition font-semibold">Centralizar 3D</button>
+            <button onclick="resetarCamera3D()" class="bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl hover:bg-slate-200 transition font-semibold border border-slate-200">Centralizar 3D</button>
           </div>
         </div>
       </div>
@@ -163,7 +164,6 @@
     const canvas = document.getElementById('canvas-2d');
     const ctx = canvas.getContext('2d');
 
-    // Variáveis do motor Three.js WebGL
     let scene, camera, renderer, controls, persianaGroup, tecidoMesh, pesoMesh;
     let percentualAbertura = 0;
 
@@ -197,21 +197,18 @@
 
       persianaGroup = new THREE.Group();
 
-      // Trilho Superior
       const trilhoGeo = new THREE.BoxGeometry(1.6, 0.08, 0.1);
       const trilhoMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
       const trilhoMesh = new THREE.Mesh(trilhoGeo, trilhoMat);
       trilhoMesh.position.y = 0.9;
       persianaGroup.add(trilhoMesh);
 
-      // Tecido
       const tecidoGeo = new THREE.PlaneGeometry(1.5, 1.8);
       const tecidoMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, side: THREE.DoubleSide, roughness: 0.6 });
       tecidoMesh = new THREE.Mesh(tecidoGeo, tecidoMat);
       tecidoMesh.position.y = 0;
       persianaGroup.add(tecidoMesh);
 
-      // Barra Inferior (Peso)
       const pesoGeo = new THREE.BoxGeometry(1.52, 0.04, 0.04);
       pesoMesh = new THREE.Mesh(pesoGeo, trilhoMat);
       pesoMesh.position.y = -0.9;
