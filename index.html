@@ -60,7 +60,7 @@
         <!-- Painel de controlos externo -->
         <div class="glass-panel p-4 rounded-2xl shadow-sm flex flex-col gap-3 text-xs font-medium text-slate-700">
           <div class="flex items-center gap-3 w-full">
-            <span class="whitespace-nowrap font-semibold">Rolô (Abrir/Fechar):</span>
+            <span id="txt-label-slider" class="whitespace-nowrap font-semibold">Rolô (Abrir/Fechar):</span>
             <input type="range" id="slider-abertura" min="0" max="100" value="0" oninput="atualizarAberturaPersiana(this.value)" class="w-full accent-indigo-600 cursor-pointer h-2 bg-slate-200 rounded-lg" />
             <span id="txt-abertura-val" class="font-bold text-indigo-600 min-w-[35px] text-right">100%</span>
           </div>
@@ -93,14 +93,14 @@
 
     <!-- Painel de Configurações & Orçamento Exato -->
     <div class="glass-panel p-6 rounded-2xl shadow-sm flex flex-col justify-between gap-6">
-      <div class="space-y-5">
-        <h2 class="text-lg font-bold text-slate-900 border-b border-slate-200/80 pb-3">Configuração & Medidas</h2>
+      <div class="space-y-4">
+        <h2 class="text-lg font-bold text-slate-900 border-b border-slate-200/80 pb-3">Configuração & Materiais</h2>
         
         <!-- Modelo de Persiana -->
         <div>
           <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Modelo de Persiana</label>
           <select id="select-modelo" onchange="aoMudarModelo()" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium">
-            <!-- Preenchido via JavaScript -->
+            <!-- Preenchido via JS -->
           </select>
         </div>
 
@@ -108,15 +108,27 @@
         <div>
           <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cor do Tecido</label>
           <select id="select-cor" onchange="atualizarCalculos(); atualizarModelo3D();" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium">
-            <!-- Preenchido via JavaScript -->
+            <!-- Preenchido via JS -->
+          </select>
+        </div>
+
+        <!-- Cor dos Acabamentos / Alumínios / Barras -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Cor dos Perfis / Barras / Bandô</label>
+          <select id="select-acabamento-cor" onchange="atualizarModelo3D();" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium">
+            <option value="#f8fafc" data-nome="Branco">Branco</option>
+            <option value="#d4d4d8" data-nome="Bege / Alumínio Natural">Bege / Alumínio Natural</option>
+            <option value="#451a03" data-nome="Marrom">Marrom</option>
+            <option value="#64748b" data-nome="Cinza / Aço Escovado">Cinza / Aço Escovado</option>
+            <option value="#0f172a" data-nome="Preto">Preto</option>
           </select>
         </div>
 
         <!-- Tipo de Bandô -->
         <div>
-          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Tipo de Bandô / Acabamento</label>
+          <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Tipo de Bandô</label>
           <select id="select-bando" onchange="atualizarCalculos();" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-slate-800 font-medium">
-            <!-- Preenchido via JavaScript -->
+            <!-- Preenchido via JS -->
           </select>
         </div>
 
@@ -139,7 +151,7 @@
             <span id="txt-area" class="font-semibold text-slate-800">2.70 m²</span>
           </div>
           <div class="flex justify-between text-xs text-slate-600">
-            <span>Preço por m² + Acabamento:</span>
+            <span>Valor Unitário m²:</span>
             <span id="txt-unitario" class="font-semibold text-slate-800">R$ 120,00</span>
           </div>
           <div class="flex justify-between text-base font-bold text-slate-900 border-t border-slate-200/60 pt-2">
@@ -177,7 +189,7 @@
   <script>
     const SEU_NUMERO_WHATSAPP = "5522999633486";
     
-    // BANCO DE DADOS DE MODELOS, CORES E BANDÔS
+    // CATÁLOGO COMPLETO DE TECIDOS E PREÇOS
     const catalogoProdutos = {
       "blackout": {
         nome: "Rolô Blackout",
@@ -190,8 +202,7 @@
         ],
         bandos: [
           { nome: "Sem Bandô", adicional: 0 },
-          { nome: "Bandô Alumínio Branco", adicional: 25 },
-          { nome: "Bandô Alumínio Escovado", adicional: 35 },
+          { nome: "Bandô Alumínio", adicional: 25 },
           { nome: "Bandô MDF Reto Amadeirado", adicional: 50 }
         ]
       },
@@ -205,12 +216,11 @@
         ],
         bandos: [
           { nome: "Sem Bandô", adicional: 0 },
-          { nome: "Bandô Alumínio Branco", adicional: 25 },
-          { nome: "Bandô Alumínio Preto", adicional: 30 }
+          { nome: "Bandô Alumínio", adicional: 25 }
         ]
       },
       "double_vision": {
-        nome: "Double Vision (Dupla Visão)",
+        nome: "Double Vision (Transpasse)",
         precoMetro: 210.00,
         cores: [
           { nome: "Off-White / Creme", hex: "#fef3c7" },
@@ -218,9 +228,9 @@
           { nome: "Caramelo / Linho", hex: "#d97706" }
         ],
         bandos: [
-          { nome: "Bandô Revestido Premium (Padrão)", adicional: 0 },
-          { nome: "Bandô Alumínio Escovado", adicional: 40 },
-          { nome: "Bandô MDF Reto Carvalho", adicional: 60 }
+          { nome: "Bandô Revestido Premium", adicional: 0 },
+          { nome: "Bandô Alumínio", adicional: 40 },
+          { nome: "Bandô MDF Reto", adicional: 60 }
         ]
       },
       "romana": {
@@ -264,10 +274,18 @@
       const modeloKey = document.getElementById('select-modelo').value;
       const produto = catalogoProdutos[modeloKey];
 
-      // Preencher Cores
+      // Atualiza texto do slider dependendo se é rolo ou double vision
+      const txtSlider = document.getElementById('txt-label-slider');
+      if (modeloKey === 'double_vision') {
+        txtSlider.innerText = "Double Vision (Recolher):";
+      } else {
+        txtSlider.innerText = "Rolô (Abrir/Fechar):";
+      }
+
+      // Preencher Cores do Tecido
       const selectCor = document.getElementById('select-cor');
       selectCor.innerHTML = '';
-      produto.cores.forEach((cor, idx) => {
+      produto.cores.forEach((cor) => {
         const opt = document.createElement('option');
         opt.value = cor.hex;
         opt.innerText = cor.nome;
@@ -277,7 +295,7 @@
       // Preencher Bandôs
       const selectBando = document.getElementById('select-bando');
       selectBando.innerHTML = '';
-      produto.bandos.forEach((bando, idx) => {
+      produto.bandos.forEach((bando) => {
         const opt = document.createElement('option');
         opt.value = bando.adicional;
         opt.innerText = `${bando.nome} ${bando.adicional > 0 ? '(+R$ ' + bando.adicional + '/m)' : ''}`;
@@ -320,7 +338,7 @@
 
       // Bandô 3D Superior
       const bandoGeo = new THREE.BoxGeometry(1.65, 0.12, 0.14);
-      const bandoMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.3 });
+      const bandoMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
       bandoMesh = new THREE.Mesh(bandoGeo, bandoMat);
       bandoMesh.position.y = 0.95;
       persianaGroup.add(bandoMesh);
@@ -332,9 +350,9 @@
       tecidoMesh.position.y = 0;
       persianaGroup.add(tecidoMesh);
 
-      // Barra Inferior / Peso
+      // Barra / Contrapeso Inferior
       const pesoGeo = new THREE.BoxGeometry(1.52, 0.04, 0.04);
-      const pesoMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
+      const pesoMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.8, roughness: 0.2 });
       pesoMesh = new THREE.Mesh(pesoGeo, pesoMat);
       pesoMesh.position.y = -0.9;
       persianaGroup.add(pesoMesh);
@@ -386,12 +404,22 @@
       document.getElementById('txt-abertura-val').innerText = `${Math.round(porcentagemFechada * 100)}%`;
 
       if (tecidoMesh && pesoMesh) {
+        const modeloKey = document.getElementById('select-modelo').value;
         const alturaBase = 1.8;
         const novaAlturaGeo = Math.max(0.05, alturaBase * porcentagemFechada);
 
         tecidoMesh.scale.y = Math.max(0.02, porcentagemFechada);
         tecidoMesh.position.y = 0.9 - (novaAlturaGeo / 2);
         pesoMesh.position.y = 0.9 - novaAlturaGeo;
+
+        // Se for Double Vision, simula visualmente o efeito de sobreposição translúcida/opaca
+        if (modeloKey === 'double_vision') {
+          tecidoMesh.material.opacity = 0.75 + (porcentagemFechada * 0.25);
+          tecidoMesh.material.transparent = true;
+        } else {
+          tecidoMesh.material.opacity = 1.0;
+          tecidoMesh.material.transparent = false;
+        }
       }
     }
 
@@ -406,13 +434,23 @@
     function atualizarModelo3D() {
       if (!persianaGroup) return;
       const largura = parseFloat(document.getElementById('input-largura').value) || 1.5;
+      const corTecidoHex = document.getElementById('select-cor').value || '#1e293b';
       
-      const corHex = document.getElementById('select-cor').value || '#1e293b';
+      const selectAcabamento = document.getElementById('select-acabamento-cor');
+      const corAcabamentoHex = selectAcabamento.value;
 
       persianaGroup.scale.x = largura / 1.5;
+      
       if (tecidoMesh) {
-        tecidoMesh.material.color.set(corHex);
+        tecidoMesh.material.color.set(corTecidoHex);
       }
+      if (bandoMesh) {
+        bandoMesh.material.color.set(corAcabamentoHex);
+      }
+      if (pesoMesh) {
+        pesoMesh.material.color.set(corAcabamentoHex);
+      }
+
       atualizarAberturaPersiana(percentualAbertura);
       desenharCanvas();
     }
@@ -532,6 +570,9 @@
       const selectCor = document.getElementById('select-cor');
       const corNome = selectCor.options[selectCor.selectedIndex].text;
 
+      const selectAcabamento = document.getElementById('select-acabamento-cor');
+      const acabamentoNome = selectAcabamento.options[selectAcabamento.selectedIndex].text;
+
       const selectBando = document.getElementById('select-bando');
       const bandoNome = selectBando.options[selectBando.selectedIndex].text;
 
@@ -543,7 +584,8 @@
       const mensagem = `Olá! Gostaria de solicitar um orçamento:%0A%0A` +
         `🛋️ *Modelo:* ${modeloNome}%0A` +
         `🎨 *Cor do Tecido:* ${corNome}%0A` +
-        `🛡️ *Acabamento:* ${bandoNome}%0A` +
+        `🛠️ *Cor dos Perfis/Barras:* ${acabamentoNome}%0A` +
+        `🛡️ *Tipo de Bandô:* ${bandoNome}%0A` +
         `📏 *Largura:* ${largura} m%0A` +
         `📐 *Altura:* ${altura} m%0A` +
         `📊 *Área Total:* ${area}%0A` +
